@@ -1,0 +1,89 @@
+@import "@fontsource/marcellus/400.css";
+@import "@fontsource/manrope/400.css";
+@import "@fontsource/manrope/600.css";
+@import "@fontsource/manrope/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@greenways-ai/visual-language/theme.css";
+
+:root {
+  --sl-font: "Manrope", system-ui, sans-serif;
+  --sl-font-mono: "IBM Plex Mono", monospace;
+  --sl-color-accent-low: #202337;
+  --sl-color-accent: #7895bd;
+  --sl-color-accent-high: #e1e8f2;
+  --sl-color-white: #fff9e9;
+  --sl-color-gray-1: #e7dfca;
+  --sl-color-gray-2: #b4ad99;
+  --sl-color-gray-3: #74776c;
+  --sl-color-gray-4: #3b4641;
+  --sl-color-gray-5: #202c29;
+  --sl-color-gray-6: #14211e;
+  --sl-color-black: #0b1513;
+  --sl-color-bg: #0b1513;
+  --sl-color-bg-nav: rgba(11,21,19,.94);
+  --sl-color-bg-sidebar: #101c19;
+  --sl-color-hairline: rgba(231,223,202,.17);
+  --sl-content-width: 54rem;
+}
+:root[data-theme="light"] {
+  --sl-color-accent-low: #dbe2ea;
+  --sl-color-accent: #5079b4;
+  --sl-color-accent-high: #263b58;
+  --sl-color-white: #17231f;
+  --sl-color-gray-1: #26342f;
+  --sl-color-gray-2: #5f6b63;
+  --sl-color-gray-3: #78827b;
+  --sl-color-gray-4: #b9b19f;
+  --sl-color-gray-5: #e5dac4;
+  --sl-color-gray-6: #f2ebdd;
+  --sl-color-black: #fff9e9;
+  --sl-color-bg: #f2ebdd;
+  --sl-color-bg-nav: rgba(242,235,221,.94);
+  --sl-color-bg-sidebar: #e9dfcd;
+  --sl-color-hairline: rgba(23,35,31,.17);
+}
+html { background: var(--sl-color-bg); }
+body { background-image: radial-gradient(circle at 84% 12%, rgba(80,121,180,.1), transparent 28rem), repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,.016) 80px); }
+:root[data-theme="light"] body { background-image: radial-gradient(circle at 84% 12%, rgba(80,121,180,.1), transparent 28rem), repeating-linear-gradient(90deg, transparent 0 79px, rgba(23,35,31,.02) 80px); }
+h1, h2, h3, .site-title { font-family: "Marcellus", Georgia, serif; font-weight: 400; letter-spacing: -.035em; }
+.site-title { letter-spacing: .16em; }
+.header, .sidebar-pane, .content-panel + .content-panel { border-color: var(--sl-color-hairline); }
+.technical-kicker { color: #7895bd; font: .65rem "IBM Plex Mono", monospace; letter-spacing: .15em; text-transform: uppercase; }
+.technical-kicker i { width: 7px; height: 7px; display: inline-block; margin-right: .55rem; border-radius: 50%; background: #e0b56f; box-shadow: 0 0 12px #e0b56f; }
+.historian-hero { position: relative; min-height: min(820px, calc(100svh - 3.5rem)); display: flex; align-items: center; overflow: hidden; }
+.historian-hero__art { position: absolute; inset: 0; background-position: center; }
+.historian-hero__veil { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5,11,14,.97) 0%, rgba(5,11,14,.84) 36%, rgba(5,11,14,.12) 72%), linear-gradient(0deg, rgba(5,11,14,.78), transparent 46%); }
+.historian-hero__copy { position: relative; z-index: 2; width: min(100% - 3rem, 1280px); margin-inline: auto; }
+.historian-hero h1 { max-width: 760px; margin: 1rem 0 1.4rem; color: #fff9e9; font-size: clamp(4rem, 9vw, 8.5rem); line-height: .94; }
+.historian-hero__copy > p:not(.technical-kicker) { max-width: 680px; color: rgba(255,249,233,.78); font-size: clamp(1rem, 1.7vw, 1.2rem); }
+.hero-links { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
+.action { min-height: 48px; display: inline-flex; align-items: center; justify-content: center; padding: .7rem 1rem; color: #fff9e9; border: 1px solid rgba(231,223,202,.34); text-decoration: none; font: 700 .67rem "Manrope", sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+.action--raven { color: #fff9e9; background: #5079b4; border-color: #5079b4; }
+.hero-command { max-width: 680px; display: flex; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding-top: 1rem; color: #aaa58f; border-top: 1px solid rgba(231,223,202,.18); font: .58rem "IBM Plex Mono", monospace; }
+.hero-command code { color: #aec7e8; }
+:root[data-theme="light"] .historian-hero__veil { background: linear-gradient(90deg, rgba(242,235,221,.97) 0%, rgba(242,235,221,.8) 38%, rgba(242,235,221,.08) 73%), linear-gradient(0deg, rgba(242,235,221,.7), transparent 45%); }
+:root[data-theme="light"] .historian-hero h1 { color: #17231f; }
+:root[data-theme="light"] .historian-hero__copy > p:not(.technical-kicker) { color: rgba(23,35,31,.78); }
+:root[data-theme="light"] .action { color: #17231f; border-color: rgba(23,35,31,.35); }
+:root[data-theme="light"] .action--raven { color: #fff9e9; }
+:root[data-theme="light"] .hero-command { color: #5f6b63; border-color: rgba(23,35,31,.18); }
+:root[data-theme="light"] .hero-command code { color: #365d91; }
+main:has(.historian-hero) > .content-panel:first-child { display: none; }
+main:has(.historian-hero) > .content-panel { padding: 0; }
+main:has(.historian-hero) .sl-container, main:has(.historian-hero) .sl-markdown-content { width: 100%; max-width: none; }
+main:has(.historian-hero) footer { display: none; }
+.historian-intro { width: min(100% - 3rem, 1100px); margin: 0 auto; padding: 8rem 0; }
+.historian-intro h2 { font-size: clamp(2.8rem, 5vw, 5rem); }
+.historian-grid { display: grid; grid-template-columns: repeat(3,1fr); margin-top: 3rem; border-top: 1px solid var(--sl-color-hairline); border-left: 1px solid var(--sl-color-hairline); }
+.historian-grid article { min-height: 230px; padding: 2rem; border-right: 1px solid var(--sl-color-hairline); border-bottom: 1px solid var(--sl-color-hairline); }
+.historian-grid strong { display: block; margin-bottom: 1rem; font: 1.5rem "Marcellus", serif; }
+.historian-grid p { color: var(--sl-color-gray-2); font-size: .9rem; }
+@media (max-width: 700px) {
+  .historian-hero { min-height: 830px; align-items: flex-end; }
+  .historian-hero__copy { width: calc(100% - 1.75rem); padding-bottom: 4rem; }
+  .historian-hero h1 { font-size: clamp(3.7rem, 18vw, 6rem); }
+  .hero-links { flex-direction: column; }
+  .hero-command { display: grid; }
+  .historian-grid { grid-template-columns: 1fr; }
+  :root[data-theme="light"] .historian-hero__veil { background: linear-gradient(0deg, rgba(242,235,221,.98) 18%, rgba(242,235,221,.4)); }
+}

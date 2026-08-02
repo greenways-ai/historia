@@ -1,0 +1,19 @@
+---
+title: Historian
+description: Git-native temporal code indexing, history, lineage, and structural similarity.
+template: splash
+---
+import HomeHero from "../../components/HomeHero.astro";
+
+<HomeHero />
+
+<section className="historian-intro">
+  <p className="technical-kicker">01 · Deterministic memory</p>
+  <h2>Git remains the source of truth.</h2>
+  <p>Historian analyzes each changed blob once, follows symbols across revisions, and stores deterministic retrieval documents in a local SQLite index. The core workflow needs no LLM, MCP server, vector database, or embedding service.</p>
+  <div className="historian-grid">
+    <article><strong>Temporal index</strong><p>Walk complete commit ancestry and process only newly reachable commits and changed blobs.</p></article>
+    <article><strong>Symbol lineage</strong><p>Trace declarations, references, structural similarity, and renamed code through repository history.</p></article>
+    <article><strong>Local retrieval</strong><p>Search durable history from a content-addressed SQLite store that can be backed up and repaired.</p></article>
+  </div>
+</section>
