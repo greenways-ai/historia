@@ -142,14 +142,14 @@ jobs:
           assets = []
           asset_root = Path('/tmp/historia-release-assets')
           if asset_root.exists():
-              assets = sorted(
+              assets = sorted([
                   {
                       'name': path.name,
                       'byte_count': path.stat().st_size,
                   }
                   for path in asset_root.iterdir()
                   if path.is_file()
-              , key=lambda item: item['name'])
+              ], key=lambda item: item['name'])
 
           status = {
               '$schema': 'historia.release.publication-status/v1',
@@ -173,9 +173,9 @@ jobs:
           Path('/tmp/release-status-v0.1.0.json').write_text(json.dumps(status, indent=2) + '\n')
           PY
 
-          rm -rf /tmp/release-status-branch
-          git clone --no-checkout "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" /tmp/release-status-branch
-          cd /tmp/release-status-branch
+          rm -rf /tmp/release-status-worktree
+          git worktree add --detach /tmp/release-status-worktree "$GITHUB_SHA"
+          cd /tmp/release-status-worktree
           git switch --orphan release-status-v0.1.0
           git rm -rf . >/dev/null 2>&1 || true
           cp /tmp/release-status-v0.1.0.json ./release-status-v0.1.0.json
