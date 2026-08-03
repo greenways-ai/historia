@@ -1,0 +1,139 @@
+---
+title: Local application
+description: Import, browse, retrieve, and inspect conversation history through the loopback-only Historia Collect interface.
+---
+import { Aside, Card, CardGrid, Steps } from "@astrojs/starlight/components";
+
+Historia Collect is served by the installed `historia` executable. It is a
+loopback-only interface over the local Git vault and rebuildable SQLite index;
+there is no required cloud service or separate application database.
+
+## Start the application
+
+```bash
+historia collect serve
+```
+
+The default address is:
+
+```text
+http://127.0.0.1:4319/
+```
+
+Override local paths or the loopback port when necessary:
+
+```bash
+historia collect serve \
+  --host 127.0.0.1 \
+  --port 4319 \
+  --vault ~/.local/share/historia/vault.git \
+  --database ~/.local/share/historia/chat.sqlite
+```
+
+Historia accepts only `127.0.0.1`, `localhost`, or `::1` as application bind
+addresses.
+
+## Application areas
+
+<CardGrid>
+  <Card title="Collect">
+    Import official ChatGPT ZIP or JSON exports, inspect collection sources, and
+    see conversation, message, revision, and archive-commit totals.
+  </Card>
+  <Card title="Archive">
+    Search current or historical revisions and open the exact conversation
+    snapshot and commit that supplied a result.
+  </Card>
+  <Card title="Context">
+    Expand bounded conversation windows, optionally include alternate branches,
+    and create Markdown context under an explicit token estimate.
+  </Card>
+  <Card title="Ledger">
+    Inspect archive commits, parent links, timestamps, source refs, transaction
+    messages, and import receipts.
+  </Card>
+  <Card title="Settings">
+    Verify Git integrity, inspect active paths, and rebuild the disposable SQLite
+    projection without changing the archive.
+  </Card>
+</CardGrid>
+
+## First-use flow
+
+<Steps>
+1. Initialize a vault if one does not already exist.
+
+   ```bash
+   historia vault init
+   ```
+
+2. Start the application.
+
+   ```bash
+   historia collect serve
+   ```
+
+3. In **Collect**, choose an official ChatGPT export ZIP or JSON file.
+
+4. Keep exact raw export files enabled when the vault should be capable of future
+   re-normalization from the provider payload.
+
+5. After import, open **Archive** and search for a known topic.
+
+6. Open **Context**, set a token budget, and generate a package for a local agent.
+</Steps>
+
+## Snapshot-aware archive browsing
+
+A search hit is not silently replaced by the latest conversation state. Opening
+a result resolves the source ref, archive commit, conversation manifest, logical
+message identity, and immutable message revision that supplied the match.
+
+The interface distinguishes messages on the provider-selected active path from
+regenerated or alternate branches. Full message content remains in Git; SQLite
+contains bounded retrieval projections and provenance pointers.
+
+## Context building
+
+The Context view:
+
+1. searches current revisions, or historical revisions when enabled;
+2. groups candidates by conversation snapshot;
+3. expands a bounded graph radius around relevant messages;
+4. prefers the active path while retaining explicitly requested branches;
+5. deduplicates immutable revisions;
+6. packs messages beneath the selected token estimate;
+7. emits stable Historia citation labels and a provenance appendix.
+
+The resulting Markdown can be copied into a CLI session or retrieved directly
+by the installed Historia agent skill.
+
+## Local security boundary
+
+The server applies the following baseline controls:
+
+- loopback-only binding;
+- Host-header validation;
+- a random per-process application session protecting state-reading and mutating
+  API routes;
+- no cross-origin API opt-in;
+- Content Security Policy that denies external scripts, images, connections,
+  framing, and object embedding;
+- owner-only temporary upload directories removed after each import;
+- no configured remote and no core telemetry.
+
+<Aside type="note" title="The session is intentionally ephemeral">
+The application token lives only in the page and server process. Closing the
+Historia process invalidates the session and a new process creates a new token.
+</Aside>
+
+## Rebuild derived data
+
+The application reads SQLite for speed. Rebuild it at any time:
+
+```bash
+historia chat index --rebuild
+```
+
+Equivalent source refs and importer outputs must produce an equivalent index.
+Git objects, manifests, and receipts remain authoritative.
