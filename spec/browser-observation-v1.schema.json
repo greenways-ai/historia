@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/browser-observation-v1.schema.json",
+  "title": "Historia Browser Observation v1",
+  "type": "object",
+  "required": ["$schema", "provider", "source_key", "observed_at", "collector", "conversation", "messages", "active_path"],
+  "properties": {
+    "$schema": { "const": "historia.collect.browser-observation/v1" },
+    "provider": { "const": "openai" },
+    "source_key": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "collector": { "type": "object", "additionalProperties": true },
+    "conversation": {
+      "type": "object",
+      "required": ["id", "title"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "url": { "type": ["string", "null"], "format": "uri" },
+        "created_at": { "type": ["string", "null"], "format": "date-time" },
+        "updated_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5000,
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "author", "blocks", "parents", "attachments", "state"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "author": { "type": "object", "additionalProperties": true },
+          "model": { "type": ["string", "null"] },
+          "created_at": { "type": ["string", "null"], "format": "date-time" },
+          "updated_at": { "type": ["string", "null"], "format": "date-time" },
+          "blocks": {
+            "type": "array",
+            "maxItems": 128,
+            "items": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": { "enum": ["text", "code", "image", "audio", "file", "citation", "tool-call", "tool-result", "provider"] },
+                "text": { "type": ["string", "null"] },
+                "language": { "type": ["string", "null"] },
+                "asset_pointer": { "type": ["string", "null"] },
+                "provider_type": { "type": ["string", "null"] },
+                "data": {},
+                "metadata": {}
+              },
+              "additionalProperties": false
+            }
+          },
+          "parents": { "type": "array", "maxItems": 16, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "attachments": { "type": "array" },
+          "state": { "type": "object", "additionalProperties": true }
+        },
+        "additionalProperties": false
+      }
+    },
+    "active_path": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+  },
+  "additionalProperties": false
+}

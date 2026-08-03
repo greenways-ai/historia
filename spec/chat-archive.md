@@ -94,6 +94,12 @@ Every normalized message MUST reference a raw provider message blob through
 `raw_oid`. Unknown provider content MUST be retained in a generic provider block
 rather than discarded.
 
+A normalized message revision MUST contain only semantic provider content and
+normalizer identity. Import or observation timestamps MUST NOT be embedded in
+the normalized message blob, because doing so would create a new Git object for
+unchanged content. Observation time belongs in conversation manifests, import
+receipts, and the rebuildable observation index.
+
 The raw export file manifest records the relative path, byte count, and SHA-256
 of each imported file. When raw-file retention is enabled, exact extracted files
 are stored beneath the archive digest. A container ZIP hash MAY also be recorded,
@@ -112,6 +118,10 @@ A message edit or regenerated response MUST create a new normalized message
 blob. The logical message ID remains stable when the provider message identity
 remains stable. Earlier revision blobs and manifests remain reachable through
 prior import commits.
+
+Observation timestamps belong to conversation manifests and import receipts, not
+the immutable normalized message body. Re-observing unchanged provider content
+therefore retains the same message revision OID.
 
 ## IDs
 
@@ -183,6 +193,25 @@ SQLite chat search, embeddings, summaries, tags, and context bundles are derived
 projections. They are not authoritative. Deleting a projection and rebuilding it
 from source refs MUST recover equivalent normalized records and provenance.
 
+The v1 SQLite projection traverses the ordered history of every
+`refs/historia/sources/*` ref. Source-ref writers preserve a linear transaction
+history through compare-and-swap updates. It stores source-ref checkpoints, import receipts,
+conversation observations, logical message identities, immutable message
+revisions, message observations, graph edges, and an FTS5 search projection.
+
+Indexing is incremental when the saved checkpoint remains reachable from the
+source ref. If a source ref is rewritten, the projection for that ref is
+removed and replayed from its new root. Git remains authoritative in both cases.
+
+Search returns the latest observed revision of each logical message by default.
+Historical search is explicit. Every result MUST include the source ref, import
+commit, conversation manifest path, normalized message path, and revision OID.
+
+A context bundle is a bounded derived artifact selected from search hits and
+neighboring messages. Token counts are estimates used for packing, not provider
+billing measurements. The bundle MUST preserve message and Git provenance and
+MUST say whether a message belongs to the active path or an alternate branch.
+
 ## V1 commands
 
 ```text
@@ -191,6 +220,16 @@ historia vault verify
 historia chat inspect-openai <export>
 historia chat import-openai <export>
 historia collect import-openai <export>
+historia collect capture-json <browser-observation.json>
+historia collect native-manifest --browser <kind> --extension-id <id> --host-path <path> --output <path>
+historia collect status
+historia collect serve
+historia chat index [--rebuild]
+historia chat list
+historia chat search <query> [--historical]
+historia chat show <conversation-hid> [--commit <oid>]
+historia context build <query> [--budget <tokens>] [--historical] [--format json|markdown]
+historia agent install codex|kimi [--scope user|project]
 ```
 
 The OpenAI importer accepts an export ZIP, an extracted export directory, a

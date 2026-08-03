@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="description" content="Historia Collect — local, Git-native conversation memory.">
+  <title>Historia Collect</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="rail" aria-label="Primary navigation">
+      <a class="brand" href="#collect" aria-label="Historia Collect home">
+        <span class="eye-mark" aria-hidden="true"></span>
+        <span class="brand-copy"><b>Historia</b><small>Collect</small></span>
+      </a>
+
+      <nav class="rail-nav">
+        <button class="nav-item is-active" type="button" data-view="collect" aria-current="page">
+          <span class="nav-index">01</span><span>Collect</span>
+        </button>
+        <button class="nav-item" type="button" data-view="archive">
+          <span class="nav-index">02</span><span>Archive</span>
+        </button>
+        <button class="nav-item" type="button" data-view="context">
+          <span class="nav-index">03</span><span>Context</span>
+        </button>
+        <button class="nav-item" type="button" data-view="ledger">
+          <span class="nav-index">04</span><span>Ledger</span>
+        </button>
+        <button class="nav-item" type="button" data-view="settings">
+          <span class="nav-index">05</span><span>Settings</span>
+        </button>
+      </nav>
+
+      <div class="rail-foot">
+        <div class="connection-state" id="connection-state">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span>Connecting</span>
+        </div>
+        <button class="theme-button" id="theme-button" type="button" aria-label="Toggle colour theme">◐</button>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="view-kicker">Local archive · private by default</p>
+          <h1 id="view-title">Collect</h1>
+        </div>
+        <div class="top-actions">
+          <div class="vault-pill" id="vault-pill" title="Historia vault status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Vault</span>
+            <code id="vault-short">—</code>
+          </div>
+          <button class="button button--quiet" id="refresh-button" type="button">Refresh</button>
+        </div>
+      </header>
+
+      <main id="view-root" tabindex="-1" aria-live="polite"></main>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="assertive" aria-atomic="true"></div>
+  <template id="loading-template">
+    <div class="loading-panel">
+      <span class="loading-rune" aria-hidden="true"></span>
+      <p>Reading the archive…</p>
+    </div>
+  </template>
+</body>
+</html>

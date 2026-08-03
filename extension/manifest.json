@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Historia Collect",
+  "version": "0.1.0",
+  "description": "Archive explicitly captured ChatGPT conversations into a local Git-native Historia vault.",
+  "permissions": [
+    "nativeMessaging",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://www.chatgpt.com/*",
+    "https://chat.openai.com/*"
+  ],
+  "background": {
+    "scripts": [
+      "src/background.js"
+    ],
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://www.chatgpt.com/*",
+        "https://chat.openai.com/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Collect this conversation",
+    "default_popup": "src/popup.html"
+  },
+  "options_page": "src/options.html",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "historia-collect@greenways.ai",
+      "strict_min_version": "121.0"
+    }
+  }
+}

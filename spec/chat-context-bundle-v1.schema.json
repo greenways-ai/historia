@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/chat-context-bundle-v1.schema.json",
+  "title": "Historia Chat Context Bundle v1",
+  "type": "object",
+  "required": [
+    "$schema",
+    "generated_at",
+    "query",
+    "budget",
+    "filters",
+    "vault_heads",
+    "matches",
+    "conversations",
+    "citations"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "historia.chat.context-bundle/v1"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "query": {
+      "type": "string"
+    },
+    "budget": {
+      "type": "object",
+      "required": [
+        "requested_tokens",
+        "estimated_tokens",
+        "estimator"
+      ],
+      "properties": {
+        "requested_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimator": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "vault_heads": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source_ref",
+          "provider",
+          "source_key",
+          "completeness",
+          "head_commit_oid"
+        ],
+        "properties": {
+          "source_ref": {
+            "type": "string",
+            "pattern": "^refs/historia/sources/"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "source_key": {
+            "type": "string"
+          },
+          "completeness": {
+            "type": "string"
+          },
+          "head_commit_oid": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40,64}$"
+          },
+          "last_indexed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "matches": {
+      "type": "object",
+      "required": [
+        "search_results",
+        "conversation_snapshots",
+        "included_messages"
+      ],
+      "properties": {
+        "search_results": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "conversation_snapshots": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "included_messages": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "conversations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "conversation_hid",
+          "title",
+          "source_ref",
+          "commit_oid",
+          "manifest_path",
+          "messages"
+        ],
+        "properties": {
+          "conversation_hid": {
+            "type": "string",
+            "pattern": "^historia:"
+          },
+          "title": {
+            "type": "string"
+          },
+          "source_ref": {
+            "type": "string",
+            "pattern": "^refs/historia/sources/"
+          },
+          "commit_oid": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40,64}$"
+          },
+          "archive_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "committed_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "manifest_path": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "citation",
+                "message_hid",
+                "revision_oid",
+                "role",
+                "content",
+                "truncated"
+              ],
+              "properties": {
+                "citation": {
+                  "type": "string",
+                  "pattern": "^H[0-9]+$"
+                },
+                "message_hid": {
+                  "type": "string",
+                  "pattern": "^historia:"
+                },
+                "revision_oid": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{40,64}$"
+                },
+                "role": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "truncated": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "citation",
+          "conversation_hid",
+          "message_hid",
+          "revision_oid",
+          "source_ref",
+          "commit_oid",
+          "manifest_path",
+          "message_path"
+        ],
+        "properties": {
+          "citation": {
+            "type": "string",
+            "pattern": "^H[0-9]+$"
+          },
+          "conversation_hid": {
+            "type": "string",
+            "pattern": "^historia:"
+          },
+          "message_hid": {
+            "type": "string",
+            "pattern": "^historia:"
+          },
+          "revision_oid": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40,64}$"
+          },
+          "source_ref": {
+            "type": "string",
+            "pattern": "^refs/historia/sources/"
+          },
+          "commit_oid": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40,64}$"
+          },
+          "manifest_path": {
+            "type": "string"
+          },
+          "message_path": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": false
+}
