@@ -4,6 +4,7 @@ import mdx from "@astrojs/mdx";
 
 export default defineConfig({
   site: "https://historian.greenways.ai",
+  vite: { build: { assetsInlineLimit: 0 } },
   integrations: [
     starlight({
       title: "Historian",
