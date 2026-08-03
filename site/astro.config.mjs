@@ -3,14 +3,15 @@ import starlight from "@astrojs/starlight";
 import mdx from "@astrojs/mdx";
 
 export default defineConfig({
-  site: "https://historian.greenways.ai",
+  site: "https://opensource.greenways.ai",
+  base: "/historian",
   vite: { build: { assetsInlineLimit: 0 } },
   integrations: [
     starlight({
       title: "Historian",
       description: "Git-native temporal code indexing, history, lineage, and structural similarity.",
       logo: { src: "./public/favicon.svg", replacesTitle: false },
-      favicon: "/favicon.svg",
+      favicon: "/historian/favicon.svg",
       customCss: ["./src/styles/custom.css"],
       components: {
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",
