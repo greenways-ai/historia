@@ -3,10 +3,13 @@ import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+const packageRoot = process.cwd();
+const cliPath = join(packageRoot, "src/historia-cli.js");
+
 function run(args, options = {}) {
-  return Bun.spawnSync([process.execPath, "src/historia-cli.js", ...args], {
-    cwd: options.cwd ?? process.cwd(),
-    env: { ...process.env, HISTORIA_PACKAGE_ROOT: process.cwd(), ...options.env },
+  return Bun.spawnSync([process.execPath, cliPath, ...args], {
+    cwd: options.cwd ?? packageRoot,
+    env: { ...process.env, HISTORIA_PACKAGE_ROOT: packageRoot, ...options.env },
     stdout: "pipe",
     stderr: "pipe"
   });
