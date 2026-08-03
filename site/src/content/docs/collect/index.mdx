@@ -1,0 +1,146 @@
+---
+title: Historia Collect
+description: Gather ChatGPT history into a private Git-native archive and make it available to local agents.
+---
+import { Aside, Card, CardGrid, Steps } from "@astrojs/starlight/components";
+
+Historia Collect is the local ingress and retrieval application for AI
+conversation history. It imports official ChatGPT account exports, captures the
+conversation currently rendered in the browser, stores both raw and normalized
+records as reachable Git objects, and builds a disposable SQLite search index.
+
+Git remains authoritative. Search indexes, context bundles, summaries, and the
+application interface are projections that can be deleted and rebuilt.
+
+<CardGrid>
+  <Card title="Complete backfill" icon="download">
+    Import an official ChatGPT ZIP, extracted export, `conversations.json`, or
+    numbered conversation files. Re-importing the same archive is idempotent.
+  </Card>
+  <Card title="Live browser collection" icon="browser">
+    Capture the currently rendered ChatGPT conversation through a restricted
+    native-messaging bridge without reading cookies, tokens, or browser storage.
+  </Card>
+  <Card title="Agent context" icon="puzzle">
+    Search current or historical message revisions and construct bounded,
+    provenance-rich context packages for Codex, Kimi, or another CLI agent.
+  </Card>
+</CardGrid>
+
+## Quick start
+
+<Steps>
+1. Install the package.
+
+   ```bash
+   npm install -g @greenways-ai/historian
+   ```
+
+2. Initialize the private local vault.
+
+   ```bash
+   historia vault init
+   ```
+
+3. Install the browser bridge.
+
+   ```bash
+   historia-collect install --browser chrome
+   ```
+
+4. Start the local application.
+
+   ```bash
+   historia collect serve
+   ```
+
+5. Import an official export or load the reported unpacked extension directory
+   in the browser.
+</Steps>
+
+<Aside type="note" title="Private by default">
+The default vault has no remote, the application binds to loopback, and the core
+workflow emits no telemetry. Configuring Git synchronization is a separate,
+explicit operation.
+</Aside>
+
+## What gets stored
+
+Each collection source advances an independent ref:
+
+```text
+refs/historia/sources/<provider>/<source-key-digest>
+```
+
+A Git commit represents one atomic collection transaction—not one message. Its
+tree makes normalized message revisions, raw provider records, conversation
+graphs, source metadata, assets, and import receipts reachable.
+
+```text
+sources/
+conversations/
+messages/
+raw/messages/
+raw/conversations/
+raw/exports/
+imports/
+```
+
+Messages retain stable logical identities while immutable Git blobs represent
+content revisions. Edited messages and regenerated branches therefore remain
+part of the historical record rather than silently replacing earlier content.
+
+## Search and context
+
+Build or refresh the SQLite projection:
+
+```bash
+historia chat index
+```
+
+Search the current message revisions:
+
+```bash
+historia chat search "signed rooms"
+```
+
+Include older revisions:
+
+```bash
+historia chat search "signed rooms" --historical
+```
+
+Construct a bounded Markdown context package:
+
+```bash
+historia context build \
+  "Hestia keys and private rooms" \
+  --budget 12000 \
+  --include-branches
+```
+
+Every result carries its source ref, archive commit, conversation manifest path,
+logical message ID, immutable revision OID, and message path.
+
+## Trust classifications
+
+Historia distinguishes how content entered the archive:
+
+| Classification | Meaning |
+| --- | --- |
+| `full-account-export` | Provider-generated account snapshot. |
+| `conversation-export` | Export intended to cover one conversation. |
+| `browser-observed` | Content rendered or visited in a browser. |
+| `cli-native` | Content emitted directly by a local CLI adapter. |
+| `user-supplied` | Manually supplied material. |
+| `derived` | Summaries, tags, projections, or other generated records. |
+
+A browser capture records what Historia observed. It does not claim provider
+authorship or account completeness.
+
+## Next steps
+
+- [Install the browser bridge](./install/)
+- [Collect rendered ChatGPT conversations](./browser/)
+- [Use the local Collect application](./app/)
+- [Give CLI agents bounded historical context](./cli-agents/)

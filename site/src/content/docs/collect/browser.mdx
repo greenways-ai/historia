@@ -1,0 +1,122 @@
+---
+title: Browser collection
+description: Capture rendered ChatGPT conversations through a local, restricted native-messaging bridge.
+---
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Browser collection fills the gap between occasional account exports. The
+extension observes only the conversation currently rendered in a ChatGPT tab,
+normalizes bounded semantic message blocks, and forwards the observation to the
+local native host.
+
+It does not read cookies, access tokens, local storage, passwords, or
+undocumented ChatGPT APIs.
+
+## Collection path
+
+```text
+ChatGPT tab
+  → content script
+  → extension service worker
+  → native messaging
+  → historia-collect-host
+  → Git source ref
+  → SQLite projection
+```
+
+<Steps>
+1. [Install the browser bridge](../install/).
+2. Open a ChatGPT conversation.
+3. Open the Historia Collect popup.
+4. Choose **Collect this conversation**.
+5. Confirm that the popup reports the archive commit and refreshed index.
+</Steps>
+
+The host commits browser observations to a source ref beneath:
+
+```text
+refs/historia/sources/openai-browser/<source-key-digest>
+```
+
+The private source key is configured in the extension options and hashed before
+it appears in refs or tree paths.
+
+## Manual and automatic collection
+
+Manual collection is the default. It creates an explicit user action for each
+captured conversation.
+
+Automatic collection can be enabled in extension settings. It is opt-in,
+debounced after rendered-message changes, and still captures only tabs matching
+the permitted ChatGPT origins.
+
+Exact content duplicates are idempotent. Observing the same normalized
+conversation later does not create a duplicate transaction merely because the
+observation timestamp changed.
+
+## Conversation graphs
+
+The browser observation format is a graph rather than a flat transcript. Each
+message has a stable local identity, parent relationships, semantic blocks, and
+an optional position on the active path.
+
+Historia rejects:
+
+- cyclic parent relationships;
+- dangling parents;
+- duplicate message IDs;
+- over-sized messages, blocks, strings, nesting, or total payloads;
+- unsupported page origins;
+- credential-shaped metadata fields.
+
+Alternate branches visible in the rendered page can therefore survive as graph
+structure instead of being flattened into one lossy transcript.
+
+## Provenance classification
+
+Browser records are stored as:
+
+```text
+browser-observed
+```
+
+This means “rendered content observed by Historia at this time.” It does not mean
+that Historia cryptographically proved provider authorship, captured the entire
+account, or observed branches the browser did not render.
+
+<Aside type="caution" title="Absence is not deletion">
+A browser capture is partial. A conversation or branch missing from one capture
+must not be interpreted as deleted. Later official account exports can be
+imported alongside browser observations and reconciled without discarding either
+provenance trail.
+</Aside>
+
+## Native security boundary
+
+The extension page and content script are treated as untrusted inputs. The host:
+
+- accepts only bounded length-prefixed JSON frames;
+- validates protocol version, request ID, and operation;
+- validates and canonicalizes the complete observation;
+- strips query strings and fragments from captured page URLs;
+- accepts only configured ChatGPT HTTPS origins;
+- checks the extension caller against the native-manifest identity;
+- uses atomic compare-and-swap Git ref updates;
+- writes no network remote unless the user separately configures one.
+
+## Live connection check
+
+Use **Check connection** in the popup to send a native `ping`. For filesystem and
+manifest diagnostics, run:
+
+```bash
+historia-collect doctor --browser chrome
+```
+
+A local observation document can also be tested without loading the extension:
+
+```bash
+historia collect capture-json browser-observation.json
+```
+
+The file must conform to `historia.collect.browser-observation/v1`.
