@@ -11,7 +11,7 @@ export default defineConfig({
       title: "Historian",
       description: "Git-native temporal code indexing, history, lineage, and structural similarity.",
       logo: { src: "./public/favicon.svg", replacesTitle: false },
-      favicon: "/historian/favicon.svg",
+      favicon: "/favicon.svg",
       customCss: ["./src/styles/custom.css"],
       components: {
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",

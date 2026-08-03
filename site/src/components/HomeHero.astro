@@ -1,6 +1,6 @@
 ---
 import ThemedArtwork from "@greenways-ai/visual-language/ThemedArtwork.astro";
-const base = import.meta.env.BASE_URL;
+const base = `${import.meta.env.BASE_URL.replace(/\/+$/, "")}/`;
 ---
 <section class="historian-hero">
   <ThemedArtwork class="historian-hero__art" light={`${base}images/historian-raven-day.webp`} dark={`${base}images/historian-raven-night.webp`} lightAlt="A raven and archivists in a couture conservation library" darkAlt="The raven watching illuminated lineages in the archive at night" position="center" />

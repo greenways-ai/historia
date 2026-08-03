@@ -43,8 +43,8 @@
   --sl-color-hairline: rgba(23,35,31,.17);
 }
 html { background: var(--sl-color-bg); }
-body { background-image: radial-gradient(circle at 84% 12%, rgba(80,121,180,.1), transparent 28rem), repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,.016) 80px); }
-:root[data-theme="light"] body { background-image: radial-gradient(circle at 84% 12%, rgba(80,121,180,.1), transparent 28rem), repeating-linear-gradient(90deg, transparent 0 79px, rgba(23,35,31,.02) 80px); }
+body { background-image: conic-gradient(from 90deg, rgba(80,121,180,.075) 25%, transparent 0 50%, rgba(224,181,111,.035) 0 75%, transparent 0), repeating-linear-gradient(90deg, transparent 0 79px, rgba(255,255,255,.016) 80px); background-size: 18px 18px, auto; }
+:root[data-theme="light"] body { background-image: conic-gradient(from 90deg, rgba(80,121,180,.06) 25%, transparent 0 50%, rgba(224,181,111,.03) 0 75%, transparent 0), repeating-linear-gradient(90deg, transparent 0 79px, rgba(23,35,31,.02) 80px); background-size: 18px 18px, auto; }
 h1, h2, h3, .site-title { font-family: "Marcellus", Georgia, serif; font-weight: 400; letter-spacing: -.035em; }
 .site-title { letter-spacing: .16em; }
 .header, .sidebar-pane, .content-panel + .content-panel { border-color: var(--sl-color-hairline); }
