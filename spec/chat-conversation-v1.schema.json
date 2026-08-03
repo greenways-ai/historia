@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/chat-conversation-v1.schema.json",
+  "title": "Historia Chat Conversation Manifest v1",
+  "type": "object",
+  "required": ["$schema", "hid", "source", "title", "nodes", "edges", "active_paths", "raw_oid"],
+  "properties": {
+    "$schema": { "const": "historia.chat.conversation/v1" },
+    "hid": { "type": "string", "pattern": "^historia:" },
+    "source": {
+      "type": "object",
+      "required": ["provider", "source_kind", "source_key", "conversation_id"],
+      "properties": {
+        "provider": { "type": "string" },
+        "source_kind": { "type": "string" },
+        "source_key": { "type": "string" },
+        "conversation_id": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "title": { "type": "string" },
+    "created_at": { "type": ["string", "null"], "format": "date-time" },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" },
+    "observed_at": { "type": ["string", "null"], "format": "date-time" },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["revision_oid", "raw_oid", "path"],
+        "properties": {
+          "node_id": { "type": ["string", "null"] },
+          "revision_oid": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+          "raw_oid": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+          "path": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "kind"],
+        "properties": {
+          "from": { "type": "string", "pattern": "^historia:" },
+          "to": { "type": "string", "pattern": "^historia:" },
+          "kind": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "active_paths": {
+      "type": "array",
+      "items": { "type": "array", "items": { "type": "string", "pattern": "^historia:" } }
+    },
+    "provider_state": { "type": "object", "additionalProperties": true },
+    "raw_oid": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "raw_path": { "type": "string" },
+    "importer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

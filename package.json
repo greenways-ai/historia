@@ -4,7 +4,8 @@
   "private": false,
   "type": "module",
   "bin": {
-    "gw-historian": "./src/cli.js"
+    "gw-historian": "./src/cli.js",
+    "historia": "./src/historia-cli.js"
   },
   "files": [
     "src",
@@ -31,7 +32,9 @@
   "scripts": {
     "doctor": "bun src/cli.js doctor",
     "build:binary": "bun build --compile src/cli.js --outfile dist/gw-historian",
+    "build:historia-binary": "bun build --compile src/historia-cli.js --outfile dist/historia",
     "test": "bun test",
+    "chat:test": "bun test test/chat-archive.test.js",
     "analyzer:test": "bb -cp analyzers/clojure/src:analyzers/clojure/test analyzers/clojure/test/greenways_historian/analyzer_test.clj",
     "conformance": "bun src/cli.js analyzer check bb -cp analyzers/clojure/src -m greenways-historian.analyzer",
     "conformance:typescript": "bun src/cli.js analyzer check bun analyzers/typescript/src/analyzer.js --fixture spec/conformance/typescript.json",

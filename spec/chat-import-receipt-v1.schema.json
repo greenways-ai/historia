@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/chat-import-receipt-v1.schema.json",
+  "title": "Historia Chat Import Receipt v1",
+  "type": "object",
+  "required": ["$schema", "provider", "source_key", "source_ref", "source_completeness", "archive", "importer", "observed_at", "include_raw_files", "stats", "warnings"],
+  "properties": {
+    "$schema": { "const": "historia.chat.import-receipt/v1" },
+    "provider": { "type": "string", "minLength": 1 },
+    "source_key": { "type": "string", "minLength": 1 },
+    "source_ref": { "type": "string", "pattern": "^refs/historia/" },
+    "source_completeness": {
+      "enum": ["full-account-export", "conversation-export", "browser-observed", "cli-native", "user-supplied", "derived"]
+    },
+    "archive": {
+      "type": "object",
+      "required": ["sha256", "byte_count", "file_count", "manifest_path"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "container_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "byte_count": { "type": "integer", "minimum": 0 },
+        "file_count": { "type": "integer", "minimum": 1 },
+        "manifest_path": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "importer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "observed_at": { "type": "string", "format": "date-time" },
+    "previous_commit_oid": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40,64}$" },
+    "include_raw_files": { "type": "boolean" },
+    "stats": {
+      "type": "object",
+      "required": ["conversations", "messages", "branch_points", "files", "bytes", "normalized_message_blobs", "raw_message_blobs", "conversation_manifests"],
+      "properties": {
+        "conversations": { "type": "integer", "minimum": 0 },
+        "messages": { "type": "integer", "minimum": 0 },
+        "branch_points": { "type": "integer", "minimum": 0 },
+        "files": { "type": "integer", "minimum": 1 },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "normalized_message_blobs": { "type": "integer", "minimum": 0 },
+        "raw_message_blobs": { "type": "integer", "minimum": 0 },
+        "conversation_manifests": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,3 @@
+export const DEFAULT_MAX_FILE_COUNT = 100_000;
+export const DEFAULT_MAX_TOTAL_BYTES = 20 * 1024 * 1024 * 1024;
+export const DEFAULT_MAX_JSON_BYTES = 1024 * 1024 * 1024;

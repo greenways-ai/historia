@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/chat-message-v1.schema.json",
+  "title": "Historia Chat Message v1",
+  "type": "object",
+  "required": ["$schema", "hid", "source", "role", "author", "blocks", "parents", "attachments"],
+  "properties": {
+    "$schema": { "const": "historia.chat.message/v1" },
+    "hid": { "type": "string", "pattern": "^historia:" },
+    "source": {
+      "type": "object",
+      "required": ["provider", "source_kind", "source_key", "conversation_id", "message_id"],
+      "properties": {
+        "provider": { "type": "string", "minLength": 1 },
+        "source_kind": { "type": "string", "minLength": 1 },
+        "source_key": { "type": "string", "minLength": 1 },
+        "conversation_id": { "type": "string", "minLength": 1 },
+        "message_id": { "type": "string", "minLength": 1 },
+        "node_id": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "role": { "type": "string", "minLength": 1 },
+    "author": {
+      "type": "object",
+      "required": ["kind", "display_name"],
+      "properties": {
+        "kind": { "type": "string" },
+        "display_name": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "model": { "type": ["string", "null"] },
+    "created_at": { "type": ["string", "null"], "format": "date-time" },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" },
+    "observed_at": { "type": ["string", "null"], "format": "date-time" },
+    "blocks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "enum": ["text", "code", "image", "audio", "file", "citation", "tool-call", "tool-result", "provider"] },
+          "text": { "type": ["string", "null"] },
+          "language": { "type": ["string", "null"] },
+          "asset_pointer": { "type": ["string", "null"] },
+          "provider_type": { "type": ["string", "null"] },
+          "data": {}
+        },
+        "additionalProperties": true
+      }
+    },
+    "parents": { "type": "array", "items": { "type": "string", "pattern": "^historia:" }, "uniqueItems": true },
+    "attachments": { "type": "array" },
+    "state": { "type": "object", "additionalProperties": true },
+    "raw_oid": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "normalizer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}

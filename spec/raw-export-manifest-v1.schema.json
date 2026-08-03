@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/raw-export-manifest-v1.schema.json",
+  "title": "Historia Raw Export Manifest v1",
+  "type": "object",
+  "required": ["$schema", "provider", "archive"],
+  "properties": {
+    "$schema": { "const": "historia.chat.raw-export-manifest/v1" },
+    "provider": { "type": "string", "minLength": 1 },
+    "archive": {
+      "type": "object",
+      "required": ["sha256", "byte_count", "files"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "container_sha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+        "byte_count": { "type": "integer", "minimum": 0 },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "byte_count", "sha256"],
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "byte_count": { "type": "integer", "minimum": 0 },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
