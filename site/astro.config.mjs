@@ -9,7 +9,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Historia",
-      description: "Git-native temporal code indexing, history, lineage, and structural similarity.",
+      description: "Git-native temporal memory for code, conversations, and agent context.",
       logo: { src: "./public/sigil.svg", replacesTitle: false },
       favicon: "/historia/sigil.svg",
       customCss: ["./src/styles/custom.css"],
@@ -24,11 +24,16 @@ export default defineConfig({
       pagefind: true,
       sidebar: [
         { label: "Overview", slug: "index" },
-        { label: "Getting started", items: [
-          { label: "Install & quick start", slug: "getting-started" },
-          { label: "Multiple repositories", slug: "getting-started/multiple-repositories" }
+        { label: "Conversation memory", items: [
+          { label: "Historia Collect", slug: "collect" },
+          { label: "Install the browser bridge", slug: "collect/install" },
+          { label: "Browser collection", slug: "collect/browser" },
+          { label: "Local application", slug: "collect/app" },
+          { label: "CLI agent context", slug: "collect/cli-agents" }
         ]},
-        { label: "Concepts", items: [
+        { label: "Code history", items: [
+          { label: "Install & quick start", slug: "getting-started" },
+          { label: "Multiple repositories", slug: "getting-started/multiple-repositories" },
           { label: "Temporal index", slug: "concepts/temporal-index" },
           { label: "Lineage & retrieval", slug: "concepts/lineage-retrieval" }
         ]},
@@ -48,7 +53,7 @@ export default defineConfig({
         ]}
       ],
       head: [
-        { tag: "meta", attrs: { property: "og:image", content: "https://historian.greenways.ai/images/historian-raven-day.webp" } },
+        { tag: "meta", attrs: { property: "og:image", content: "https://opensource.greenways.ai/historia/images/historian-raven-day.webp" } },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } }
       ]
     }),
