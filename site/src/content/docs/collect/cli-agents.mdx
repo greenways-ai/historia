@@ -1,0 +1,157 @@
+---
+title: CLI agent context
+description: Give Codex, Kimi, and other local agents bounded, provenance-rich access to archived conversations.
+---
+import { Aside, Card, CardGrid, Steps } from "@astrojs/starlight/components";
+
+Historia does not rewrite a CLI application's private session database. Instead,
+it gives agents a stable retrieval interface over the Git archive and installs a
+portable skill describing how to search, expand, cite, and verify that history.
+
+This keeps provider- and CLI-specific storage formats outside the archive
+contract while still making earlier web conversations available during local
+work.
+
+## Install the agent skill
+
+<CardGrid>
+  <Card title="Codex">
+    ```bash
+    historia agent install codex
+    ```
+  </Card>
+  <Card title="Kimi">
+    ```bash
+    historia agent install kimi
+    ```
+  </Card>
+</CardGrid>
+
+Install at project scope instead of the user profile:
+
+```bash
+historia agent install codex --scope project
+historia agent install kimi --scope project
+```
+
+The skill is written to:
+
+| Agent | User scope | Project scope |
+| --- | --- | --- |
+| Codex | `${CODEX_HOME:-~/.codex}/skills/historia-chat-agent/` | `.codex/skills/historia-chat-agent/` |
+| Kimi | `${KIMI_CODE_HOME:-~/.kimi-code}/skills/historia-chat-agent/` | `.kimi-code/skills/historia-chat-agent/` |
+
+## Prepare the index
+
+```bash
+historia chat index
+```
+
+`index` is incremental. It reads source refs, processes newly reachable archive
+commits, stores new immutable revisions once, and updates checkpoints. Delete the
+SQLite file and use `--rebuild` when a complete projection refresh is required.
+
+## Search directly
+
+```bash
+historia chat search "Hestia private rooms"
+```
+
+Narrow the result set:
+
+```bash
+historia chat search "agent keys" \
+  --role user \
+  --role assistant \
+  --since 2026-07-01 \
+  --limit 20
+```
+
+Search old message revisions as well as the current revision:
+
+```bash
+historia chat search "earlier architecture" --historical
+```
+
+## Build an explicit context package
+
+```bash
+historia context build \
+  "Hestia keys, private rooms and ledger signing" \
+  --budget 12000 \
+  --max-conversations 8 \
+  --radius 2 \
+  --include-branches \
+  --format markdown \
+  --output /tmp/historia-context.md
+```
+
+The bundle records:
+
+- the query and retrieval options;
+- the selected source refs and archive commits;
+- conversation snapshots and manifest paths;
+- logical message IDs and immutable revision OIDs;
+- active-path and branch relationships;
+- estimated token use and truncation decisions;
+- stable citation labels for every included message.
+
+## Agent workflow
+
+<Steps>
+1. Refresh the index before relying on newly imported or browser-collected work.
+
+   ```bash
+   historia chat index
+   ```
+
+2. Use the narrowest search that can answer the task.
+
+3. Expand context only around relevant messages and conversation snapshots.
+
+4. Preserve Historia citation labels in conclusions, implementation notes, or
+   generated plans.
+
+5. Distinguish provider timestamps from archive observation and import times.
+
+6. Treat structural or lexical similarity as ranking evidence—not proof that two
+   messages, decisions, or code structures are equivalent.
+</Steps>
+
+## Provenance returned to agents
+
+A result can be resolved back through:
+
+```text
+source ref
+  → archive commit
+  → conversation manifest path
+  → logical message identity
+  → immutable revision OID
+  → message object path
+  → raw provider record OID
+```
+
+This means an agent can report not merely that “the user discussed private
+rooms,” but which imported or observed conversation, commit, branch, and message
+revision supports the claim.
+
+<Aside type="caution" title="Retrieval is not memory mutation">
+Installing the skill does not inject archived conversations into an agent's own
+historical session store. The agent reads selected Historia context on demand.
+This avoids depending on undocumented CLI databases and prevents accidental
+bulk disclosure of the entire private archive.
+</Aside>
+
+## Generic CLI use
+
+An agent without a dedicated skill can consume the same deterministic interface:
+
+```bash
+historia chat search "query" > /tmp/results.json
+historia context build "query" --format markdown > /tmp/context.md
+```
+
+The core retrieval path requires no MCP server, embedding provider, remote vector
+database, or LLM call. An MCP adapter can be added later without changing the
+Git or SQLite contracts.
