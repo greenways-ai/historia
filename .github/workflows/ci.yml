@@ -26,6 +26,8 @@ jobs:
         run: |
           mkdir -p dist
           bun run build:historia-binary
+          bun run build:collect-installer-binary
           bun run build:collect-host-binary
           ./dist/historia --version
+          ./dist/historia-collect --version
       - run: bun run conformance
