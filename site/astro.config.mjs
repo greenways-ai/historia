@@ -14,6 +14,7 @@ export default defineConfig({
       favicon: "/historia/sigil.svg",
       customCss: ["./src/styles/custom.css"],
       components: {
+        Header: "./src/components/SharedSiteHeader.astro",
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",
         ThemeSelect: "./src/components/GreenwaysThemeSelect.astro"
       },
