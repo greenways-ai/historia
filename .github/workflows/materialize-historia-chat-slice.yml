@@ -67,11 +67,9 @@ jobs:
               invalid = [(index, byte) for index, byte in enumerate(normalized) if byte not in valid]
               if invalid:
                   raise SystemExit(f"{name} contains non-base64 bytes: {invalid[:20]}")
-              print(f"{name}: bytes={len(normalized)}")
               parts.append(normalized)
 
           joined = b"".join(parts)
-          print(f"staged base64 bytes={len(joined)} mod4={len(joined) % 4}")
 
           def decode_and_digest(encoded: bytes) -> tuple[bytes, str] | None:
               try:
@@ -83,7 +81,6 @@ jobs:
           result = decode_and_digest(joined)
           if result is not None and result[1] == expected:
               decoded = result[0]
-              print("archive matched without repair")
           else:
               repair_index = part_names.index(repair_name)
               repair = parts[repair_index]
@@ -99,8 +96,7 @@ jobs:
                   after = repair[offset:] + suffix
                   for character in alphabet:
                       attempts += 1
-                      candidate = before + bytes((character,)) + after
-                      candidate_result = decode_and_digest(candidate)
+                      candidate_result = decode_and_digest(before + bytes((character,)) + after)
                       if candidate_result is not None and candidate_result[1] == expected:
                           decoded = candidate_result[0]
                           print(
@@ -110,8 +106,6 @@ jobs:
                           break
                   if decoded is not None:
                       break
-                  if offset and offset % 100 == 0:
-                      print(f"checked {offset} repair offsets")
 
               if decoded is None:
                   raise SystemExit(f"no one-character repair matched archive SHA-256 after {attempts} attempts")
@@ -125,8 +119,16 @@ jobs:
 
           tar -tzf /tmp/historia-next.tar.gz >/dev/null
           tar -xzf /tmp/historia-next.tar.gz -C .
+
+          # GitHub Actions' repository token cannot push workflow-file changes.
+          # Preserve the intended CI workflow as ordinary source for the connector
+          # to apply after this commit, then restore every workflow to HEAD.
+          cp .github/workflows/ci.yml /tmp/historia-ci.yml
+          git checkout HEAD -- .github/workflows
+          cp /tmp/historia-ci.yml .historia-ci.yml
+
           rm -rf .historia-upload
-          rm -f .github/workflows/materialize-historia-chat-slice.yml
+          chmod +x src/historia-cli.js src/collect/native-entry.js
 
           git config user.name "Historia Build Bot"
           git config user.email "collect@historia.local"
