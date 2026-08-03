@@ -36,7 +36,7 @@ jobs:
           import hashlib
           from pathlib import Path
 
-          parts = [
+          part_names = [
               ".historia-upload/p00-0",
               ".historia-upload/p00-1",
               ".historia-upload/p00-2",
@@ -54,34 +54,72 @@ jobs:
               ".historia-upload/p07-0",
               ".historia-upload/p07-1",
           ]
-          alphabet = set(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+          repair_name = ".historia-upload/p03-2-2"
+          alphabet = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+          valid = set(alphabet + b"=")
           whitespace = set(b" \t\r\n")
-          chunks = []
-          for name in parts:
-              raw = Path(name).read_bytes()
-              invalid = [(index, byte) for index, byte in enumerate(raw) if byte not in alphabet and byte not in whitespace]
-              print(f"{name}: bytes={len(raw)} invalid={len(invalid)}")
-              for index, byte in invalid[:20]:
-                  start = max(0, index - 12)
-                  end = min(len(raw), index + 13)
-                  print(f"  offset={index} byte=0x{byte:02x} context={raw[start:end]!r}")
-              chunks.append(raw)
-
-          joined = b"".join(chunks)
-          normalized = bytes(byte for byte in joined if byte not in whitespace)
-          invalid = [(index, byte) for index, byte in enumerate(normalized) if byte not in alphabet]
-          print(f"joined={len(joined)} normalized={len(normalized)} mod4={len(normalized) % 4} invalid={len(invalid)}")
-          if invalid:
-              raise SystemExit("staged bundle contains non-base64 bytes")
-          try:
-              decoded = base64.b64decode(normalized, validate=True)
-          except Exception as error:
-              raise SystemExit(f"strict base64 decode failed: {error}") from error
-          digest = hashlib.sha256(decoded).hexdigest()
-          print(f"decoded={len(decoded)} sha256={digest}")
           expected = "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035"
+
+          parts: list[bytes] = []
+          for name in part_names:
+              raw = Path(name).read_bytes()
+              normalized = bytes(byte for byte in raw if byte not in whitespace)
+              invalid = [(index, byte) for index, byte in enumerate(normalized) if byte not in valid]
+              if invalid:
+                  raise SystemExit(f"{name} contains non-base64 bytes: {invalid[:20]}")
+              print(f"{name}: bytes={len(normalized)}")
+              parts.append(normalized)
+
+          joined = b"".join(parts)
+          print(f"staged base64 bytes={len(joined)} mod4={len(joined) % 4}")
+
+          def decode_and_digest(encoded: bytes) -> tuple[bytes, str] | None:
+              try:
+                  decoded = base64.b64decode(encoded, validate=True)
+              except Exception:
+                  return None
+              return decoded, hashlib.sha256(decoded).hexdigest()
+
+          result = decode_and_digest(joined)
+          if result is not None and result[1] == expected:
+              decoded = result[0]
+              print("archive matched without repair")
+          else:
+              repair_index = part_names.index(repair_name)
+              repair = parts[repair_index]
+              prefix = b"".join(parts[:repair_index])
+              suffix = b"".join(parts[repair_index + 1:])
+              if len(joined) % 4 != 3:
+                  raise SystemExit("archive is not a one-character-short base64 stream")
+
+              decoded = None
+              attempts = 0
+              for offset in range(len(repair) + 1):
+                  before = prefix + repair[:offset]
+                  after = repair[offset:] + suffix
+                  for character in alphabet:
+                      attempts += 1
+                      candidate = before + bytes((character,)) + after
+                      candidate_result = decode_and_digest(candidate)
+                      if candidate_result is not None and candidate_result[1] == expected:
+                          decoded = candidate_result[0]
+                          print(
+                              f"recovered missing base64 character at {repair_name}:{offset}; "
+                              f"character={chr(character)!r}; attempts={attempts}"
+                          )
+                          break
+                  if decoded is not None:
+                      break
+                  if offset and offset % 100 == 0:
+                      print(f"checked {offset} repair offsets")
+
+              if decoded is None:
+                  raise SystemExit(f"no one-character repair matched archive SHA-256 after {attempts} attempts")
+
+          digest = hashlib.sha256(decoded).hexdigest()
           if digest != expected:
               raise SystemExit(f"archive digest mismatch: expected {expected}, found {digest}")
+          print(f"decoded={len(decoded)} sha256={digest}")
           Path("/tmp/historia-next.tar.gz").write_bytes(decoded)
           PY
 
