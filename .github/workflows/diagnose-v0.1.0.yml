@@ -1,0 +1,61 @@
+name: Diagnose Historia v0.1.0 publication
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/diagnose-v0.1.0.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Inspect live publication channels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+
+          echo "::group::GitHub Release"
+          gh release view v0.1.0 \
+            --json tagName,name,isDraft,isPrerelease,publishedAt,url,assets \
+            > /tmp/historia-release.json 2>/tmp/historia-release.err
+          release_code=$?
+          echo "exit_code=$release_code"
+          cat /tmp/historia-release.json 2>/dev/null || true
+          cat /tmp/historia-release.err 2>/dev/null || true
+          echo "::endgroup::"
+
+          echo "::group::npm registry"
+          npm view @greenways-ai/historian@0.1.0 \
+            name version dist.integrity dist.tarball time --json \
+            > /tmp/historia-npm.json 2>/tmp/historia-npm.err
+          npm_code=$?
+          echo "exit_code=$npm_code"
+          cat /tmp/historia-npm.json 2>/dev/null || true
+          cat /tmp/historia-npm.err 2>/dev/null || true
+          echo "::endgroup::"
+
+          {
+            echo "## Historia v0.1.0 publication diagnosis"
+            echo
+            echo "- GitHub Release query exit code: \`$release_code\`"
+            echo "- npm registry query exit code: \`$npm_code\`"
+            if [ "$release_code" -eq 0 ]; then
+              echo "- GitHub Release: published"
+            else
+              echo "- GitHub Release: unavailable"
+            fi
+            if [ "$npm_code" -eq 0 ]; then
+              echo "- npm package: published"
+            else
+              echo "- npm package: unavailable"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
