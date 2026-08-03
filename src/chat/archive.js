@@ -1,15 +1,10 @@
-import { homedir, platform } from "node:os";
-import { join } from "node:path";
-import { canonicalJson, digestPath, pathKey, sha256 } from "./identity.js";
+import { canonicalJson } from "./identity.js";
+import { assertHistoriaSourceRef, conversationArchivePaths, historiaSourcePath, historiaSourceRef, messageArchivePaths } from "./archive-layout.js";
+import { defaultHistoriaVaultPath } from "./paths.js";
 import { OPENAI_IMPORTER_VERSION, receiptKeyFor, withOpenAIExport } from "./openai-export.js";
 import { GitVault } from "../vault/git-writer.js";
 
-export function defaultHistoriaVaultPath() {
-  if (process.env.HISTORIA_VAULT) return process.env.HISTORIA_VAULT;
-  if (platform() === "darwin") return join(homedir(), "Library", "Application Support", "Historia", "vault.git");
-  if (platform() === "win32") return join(process.env.LOCALAPPDATA ?? join(homedir(), "AppData", "Local"), "Historia", "vault.git");
-  return join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "historia", "vault.git");
-}
+export { defaultHistoriaVaultPath } from "./paths.js";
 
 function encodeArchivePath(relativePath) {
   return relativePath
@@ -18,25 +13,6 @@ function encodeArchivePath(relativePath) {
     .filter(Boolean)
     .map((part) => encodeURIComponent(part))
     .join("/");
-}
-
-function sourceRefFor(sourceKey) {
-  return `refs/historia/sources/openai/${pathKey(sourceKey, 32)}`;
-}
-
-function messagePaths(normalizedOid, rawOid) {
-  return {
-    normalized: digestPath("messages", normalizedOid, "message.json"),
-    raw: digestPath("raw/messages", rawOid, "message.json")
-  };
-}
-
-function conversationPaths(hid, rawOid) {
-  const key = sha256(hid);
-  return {
-    manifest: `conversations/${key.slice(0, 2)}/${key}/manifest.json`,
-    raw: digestPath("raw/conversations", rawOid, "conversation.json")
-  };
 }
 
 export async function initHistoriaVault(vaultPath = defaultHistoriaVaultPath(), options = {}) {
@@ -58,8 +34,7 @@ export async function archiveOpenAIExport({
   const vault = await GitVault.init(vaultPath);
 
   return withOpenAIExport(inputPath, { sourceKey }, async (exported) => {
-    const sourceRef = ref ?? sourceRefFor(exported.source.key);
-    if (!sourceRef.startsWith("refs/historia/")) throw new Error("Historia chat imports must use a refs/historia/* ref");
+    const sourceRef = assertHistoriaSourceRef(ref ?? historiaSourceRef("openai", exported.source.key));
     const receiptPath = receiptKeyFor(exported.archive.sha256, { includeRawFiles });
     const previousCommitOid = await vault.resolveRef(sourceRef);
     if (previousCommitOid && await vault.fileExists(sourceRef, receiptPath)) {
@@ -81,7 +56,7 @@ export async function archiveOpenAIExport({
     const rawMessageOids = new Set();
     const conversationManifestPaths = [];
 
-    const sourcePath = `sources/openai/${pathKey(exported.source.key, 40)}/source.json`;
+    const sourcePath = historiaSourcePath("openai", exported.source.key);
     let previousSource = null;
     if (previousCommitOid && await vault.fileExists(sourceRef, sourcePath)) {
       try { previousSource = JSON.parse(await vault.readText(sourceRef, sourcePath)); }
@@ -102,7 +77,7 @@ export async function archiveOpenAIExport({
     for (const conversation of exported.conversations) {
       const rawConversationText = canonicalJson(conversation.raw);
       const rawConversationOid = await vault.writeBlob(rawConversationText);
-      const paths = conversationPaths(conversation.hid, rawConversationOid);
+      const paths = conversationArchivePaths(conversation.hid, rawConversationOid);
       files.set(paths.raw, { oid: rawConversationOid });
 
       const nodes = {};
@@ -111,16 +86,18 @@ export async function archiveOpenAIExport({
         const rawOid = await vault.writeBlob(rawMessageText);
         rawMessageOids.add(rawOid);
 
+        // Observation time belongs to the manifest and receipt. Keeping it out of
+        // the normalized message makes unchanged message revisions retain the same
+        // Git OID across later account exports.
         const normalizedMessage = {
           ...message.normalized,
           raw_oid: rawOid,
-          observed_at: importedAt,
           normalizer: { name: "historia-openai-export", version: OPENAI_IMPORTER_VERSION }
         };
         const normalizedText = canonicalJson(normalizedMessage);
         const normalizedOid = await vault.writeBlob(normalizedText);
         normalizedMessageOids.add(normalizedOid);
-        const messagePath = messagePaths(normalizedOid, rawOid);
+        const messagePath = messageArchivePaths(normalizedOid, rawOid);
         files.set(messagePath.raw, { oid: rawOid });
         files.set(messagePath.normalized, { oid: normalizedOid });
         nodes[message.hid] = {

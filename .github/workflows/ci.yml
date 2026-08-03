@@ -22,4 +22,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - run: bun run check
+      - name: Build Historia executables
+        run: |
+          mkdir -p dist
+          bun run build:historia-binary
+          bun run build:collect-host-binary
+          ./dist/historia --version
       - run: bun run conformance

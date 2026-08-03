@@ -5,7 +5,8 @@
   "type": "module",
   "bin": {
     "gw-historian": "./src/cli.js",
-    "historia": "./src/historia-cli.js"
+    "historia": "./src/historia-cli.js",
+    "historia-collect-host": "./src/collect/native-entry.js"
   },
   "files": [
     "src",
@@ -13,6 +14,8 @@
     "docs",
     "skills",
     "spec",
+    "extension",
+    "apps",
     "bb.edn",
     "greenways-historian.example.json",
     "README.md",
@@ -33,8 +36,10 @@
     "doctor": "bun src/cli.js doctor",
     "build:binary": "bun build --compile src/cli.js --outfile dist/gw-historian",
     "build:historia-binary": "bun build --compile src/historia-cli.js --outfile dist/historia",
+    "build:collect-host-binary": "bun build --compile src/collect/native-entry.js --outfile dist/historia-collect-host",
     "test": "bun test",
-    "chat:test": "bun test test/chat-archive.test.js",
+    "chat:test": "bun test test/chat-archive.test.js test/chat-index.test.js test/chat-schema.test.js test/historia-cli.test.js test/object-batch.test.js",
+    "collect:test": "bun test test/collect-browser.test.js test/collect-server.test.js",
     "analyzer:test": "bb -cp analyzers/clojure/src:analyzers/clojure/test analyzers/clojure/test/greenways_historian/analyzer_test.clj",
     "conformance": "bun src/cli.js analyzer check bb -cp analyzers/clojure/src -m greenways-historian.analyzer",
     "conformance:typescript": "bun src/cli.js analyzer check bun analyzers/typescript/src/analyzer.js --fixture spec/conformance/typescript.json",
@@ -45,7 +50,8 @@
     "fixture:typescript": "bun benchmarks/generate-typescript-history.js",
     "fixture:validate:typescript": "bun scripts/validate-typescript-history.js",
     "check": "bun test && bun run analyzer:test && bb run analyzer:kondo:test",
-    "fixture:validate": "bun scripts/validate-fixture.js"
+    "fixture:validate": "bun scripts/validate-fixture.js",
+    "collect:serve": "bun src/historia-cli.js collect serve"
   },
   "engines": {
     "bun": ">=1.2.18"

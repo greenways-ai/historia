@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historia Collect settings</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 680px; margin: 48px auto; padding: 0 24px; background: #0b1513; color: #fff9e9; }
+    h1 { font: 400 38px Georgia, serif; }
+    label { display: block; margin: 22px 0 8px; font-weight: 700; }
+    input[type="text"] { width: 100%; box-sizing: border-box; padding: 12px; background: #14211e; color: inherit; border: 1px solid #3b4641; }
+    .check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+    .help { color: #b4ad99; font-size: 13px; line-height: 1.5; }
+    button { margin-top: 24px; padding: 12px 18px; border: 0; background: #5079b4; color: white; font-weight: 700; }
+    #status { margin-left: 12px; color: #e0b56f; }
+  </style>
+</head>
+<body>
+  <h1>Historia Collect</h1>
+  <form id="settings">
+    <label for="sourceKey">Local source key</label>
+    <input id="sourceKey" name="sourceKey" type="text" maxlength="256" autocomplete="off">
+    <p class="help">Use a stable private label for this browser profile. It is hashed before appearing in Git refs and paths.</p>
+
+    <label class="check">
+      <input id="autoCapture" name="autoCapture" type="checkbox">
+      <span>Automatically collect a conversation after rendered messages change.<br><span class="help">Disabled by default. Exact duplicate captures remain idempotent.</span></span>
+    </label>
+
+    <button type="submit">Save settings</button><span id="status" role="status"></span>
+  </form>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

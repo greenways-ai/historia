@@ -8,7 +8,7 @@
     "$schema": { "const": "historia.chat.import-receipt/v1" },
     "provider": { "type": "string", "minLength": 1 },
     "source_key": { "type": "string", "minLength": 1 },
-    "source_ref": { "type": "string", "pattern": "^refs/historia/" },
+    "source_ref": { "type": "string", "pattern": "^refs/historia/sources/" },
     "source_completeness": {
       "enum": ["full-account-export", "conversation-export", "browser-observed", "cli-native", "user-supplied", "derived"]
     },
