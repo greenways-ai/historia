@@ -1,6 +1,6 @@
 ---
 title: Historia
-description: Git-native temporal code indexing, history, lineage, and structural similarity.
+description: Git-native temporal memory for code, conversations, and agent context.
 template: splash
 ---
 import HomeHero from "../../components/HomeHero.astro";
@@ -11,11 +11,14 @@ import ArtworkCatalogue from "../../components/ArtworkCatalogue.astro";
 <section className="historian-intro">
   <p className="technical-kicker">01 · Deterministic memory</p>
   <h2>Git remains the source of truth.</h2>
-  <p>Historia analyzes each changed blob once, follows symbols across revisions, and stores deterministic retrieval documents in a local SQLite index. The core workflow needs no LLM, MCP server, vector database, or embedding service.</p>
+  <p>Historia preserves code evolution and AI conversation history as content-addressed Git objects, then builds local SQLite projections for fast retrieval. The core workflow needs no LLM, MCP server, vector database, or embedding service.</p>
   <div className="historian-grid">
-    <article><strong>Temporal index</strong><p>Walk complete commit ancestry and process only newly reachable commits and changed blobs.</p></article>
+    <article><strong>Conversation archive</strong><p>Import account exports and rendered browser conversations without flattening regenerated branches or overwriting edited messages.</p></article>
+    <article><strong>Agent context</strong><p>Give local agents bounded, token-aware context packages with refs, commits, manifests, message identities, and revision OIDs.</p></article>
+    <article><strong>Temporal code index</strong><p>Walk complete commit ancestry and analyze only newly reachable commits and changed blobs.</p></article>
     <article><strong>Symbol lineage</strong><p>Trace declarations, references, structural similarity, and renamed code through repository history.</p></article>
-    <article><strong>Local retrieval</strong><p>Search durable history from a content-addressed SQLite store that can be backed up and repaired.</p></article>
+    <article><strong>Local retrieval</strong><p>Search rebuildable FTS projections while keeping complete source content authoritative in Git.</p></article>
+    <article><strong>Explicit provenance</strong><p>Distinguish provider time, observation time, import transactions, source completeness, and derived records.</p></article>
   </div>
 </section>
 
