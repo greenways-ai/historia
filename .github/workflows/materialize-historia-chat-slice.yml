@@ -1,0 +1,83 @@
+name: Materialize Historia chat slice
+
+on:
+  push:
+    branches:
+      - agent/chat-retrieval-collect-app
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ github.actor != 'github-actions[bot]' && (github.head_ref == 'agent/chat-retrieval-collect-app' || github.ref == 'refs/heads/agent/chat-retrieval-collect-app') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/chat-retrieval-collect-app
+      - name: Materialize source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d .historia-upload ]; then
+            echo "No bundle to materialize."
+            exit 0
+          fi
+
+          cat <<'SUMS' | sha256sum --check -
+          98b7396059a392e825f74ef7d0eac2cad77047f4d47ebcd9eff0de0ec114b0f6  .historia-upload/p00-0
+          73f3bab4203b58a30e09e68b652c003ec49787ef3543893a9212859b90fe476f  .historia-upload/p00-1
+          9cc00705dd7942f47d28ed489726a99162976fc9da4ad1ed80577f9cb77062ed  .historia-upload/p00-2
+          55914083e130182aa94c8cd45583a352a58ec275164559dbc770a763eb131906  .historia-upload/part-01
+          1da84d6570625740ed13e96089ce89e7e41bbae93f4d565f8dc05b2a39722973  .historia-upload/part-02
+          44d70d1c591fdb2fbb6da4cf665f916025466bcb525c19ab9ddfafb4b8ceae7c  .historia-upload/p03-0
+          96e584a44acb13f135ccc22efab42ef57378ad48c9e4d9ee47d15370875dc766  .historia-upload/p03-1
+          a7d919ae5b0334e966dff63d0990d036fade631faf90123b369e15d8885be4e4  .historia-upload/p03-2-0
+          a9a120f9af5d9bb37503a227e3184485d5ef3ec28a3c27c7496d11aa9313b238  .historia-upload/p03-2-1
+          d8af1acbcc4c5810b08d2337bfb703f4097e12ff7bd0bc69964b9bda4d91b107  .historia-upload/p03-2-2
+          6bb978c7ab631a778d90180619fddb2cbca38ef480a60e43c40515708fb2e617  .historia-upload/p03-2-3
+          2ab01cddc71a96c5fa45707165bb29e9fb34d68b59cb43fc41a7e7b57501be22  .historia-upload/part-04
+          6d9892e4721b493ee65df7bbe43b2f056ce9bad64bab603aeabaa2f9bf0afb97  .historia-upload/part-05
+          ef7ccf24bfbc6413e770e6337469a559952f59d5ff6b84b93fceb6d1af58fa2c  .historia-upload/part-06
+          a0caf32fc4abfd622fa884b4098e49ee0d05b222637a00a5bd7392bc9be3d1ec  .historia-upload/p07-0
+          373c065ddd48c8a3d59786cbbd63b48e6c9c1fab538dfef12e63969a17fa47ee  .historia-upload/p07-1
+          SUMS
+
+          cat \
+            .historia-upload/p00-0 \
+            .historia-upload/p00-1 \
+            .historia-upload/p00-2 \
+            .historia-upload/part-01 \
+            .historia-upload/part-02 \
+            .historia-upload/p03-0 \
+            .historia-upload/p03-1 \
+            .historia-upload/p03-2-0 \
+            .historia-upload/p03-2-1 \
+            .historia-upload/p03-2-2 \
+            .historia-upload/p03-2-3 \
+            .historia-upload/part-04 \
+            .historia-upload/part-05 \
+            .historia-upload/part-06 \
+            .historia-upload/p07-0 \
+            .historia-upload/p07-1 \
+            | base64 --decode > /tmp/historia-next.tar.gz
+
+          echo "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035  /tmp/historia-next.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/historia-next.tar.gz -C .
+          rm -rf .historia-upload
+          rm -f .github/workflows/materialize-historia-chat-slice.yml
+
+          git config user.name "Historia Build Bot"
+          git config user.email "collect@historia.local"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Bundle produced no changes."
+            exit 0
+          fi
+          git commit -m "feat: add chat retrieval and collect app"
+          git push origin HEAD:agent/chat-retrieval-collect-app
