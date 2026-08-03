@@ -1,0 +1,40 @@
+name: Materialize Historia chat slice
+
+on:
+  push:
+    branches:
+      - agent/chat-retrieval-collect-app
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Materialize source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -d .historia-upload ]; then
+            echo "No bundle to materialize."
+            exit 0
+          fi
+          cat .historia-upload/part-* | base64 --decode > /tmp/historia-next.tar.gz
+          echo "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035  /tmp/historia-next.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/historia-next.tar.gz -C .
+          rm -rf .historia-upload
+          rm -f .github/workflows/materialize-historia-chat-slice.yml
+          git config user.name "Historia Build Bot"
+          git config user.email "collect@historia.local"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Bundle produced no changes."
+            exit 0
+          fi
+          git commit -m "feat: add chat retrieval and collect app"
+          git push origin HEAD:agent/chat-retrieval-collect-app
