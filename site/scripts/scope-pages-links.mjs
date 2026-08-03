@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../dist/", import.meta.url));
-const prefix = "/historian";
+const prefix = "/historia";
 
 async function visit(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -11,7 +11,7 @@ async function visit(directory) {
     if (entry.isDirectory()) await visit(path);
     if (!entry.isFile() || !entry.name.endsWith(".html")) continue;
     const source = await readFile(path, "utf8");
-    const scoped = source.replace(/(href|src|srcset|action)="\/(?!historian(?:\/|"))/g, `$1="${prefix}/`);
+    const scoped = source.replace(/(href|src|srcset|action)="\/(?!historia(?:\/|"))/g, `$1="${prefix}/`);
     if (scoped !== source) await writeFile(path, scoped);
   }
 }

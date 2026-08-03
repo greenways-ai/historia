@@ -4,11 +4,11 @@ import mdx from "@astrojs/mdx";
 
 export default defineConfig({
   site: "https://opensource.greenways.ai",
-  base: "/historian",
+  base: "/historia",
   vite: { build: { assetsInlineLimit: 0 } },
   integrations: [
     starlight({
-      title: "Historian",
+      title: "Historia",
       description: "Git-native temporal code indexing, history, lineage, and structural similarity.",
       logo: { src: "./public/favicon.svg", replacesTitle: false },
       favicon: "/favicon.svg",
@@ -17,8 +17,8 @@ export default defineConfig({
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",
         ThemeSelect: "./src/components/GreenwaysThemeSelect.astro"
       },
-      social: [{ icon: "github", label: "GitHub", href: "https://github.com/greenways-ai/historian" }],
-      editLink: { baseUrl: "https://github.com/greenways-ai/historian/edit/main/site/" },
+      social: [{ icon: "github", label: "GitHub", href: "https://github.com/greenways-ai/historia" }],
+      editLink: { baseUrl: "https://github.com/greenways-ai/historia/edit/main/site/" },
       lastUpdated: true,
       pagefind: true,
       sidebar: [
@@ -42,8 +42,8 @@ export default defineConfig({
           { label: "Agent skill", slug: "reference/agent-skill" }
         ]},
         { label: "Project", items: [
-          { label: "Source ↗", link: "https://github.com/greenways-ai/historian" },
-          { label: "Greenways ↗", link: "https://greenways.ai/opensource/historian/" }
+          { label: "Source ↗", link: "https://github.com/greenways-ai/historia" },
+          { label: "Greenways ↗", link: "https://opensource.greenways.ai/historia/" }
         ]}
       ],
       head: [
