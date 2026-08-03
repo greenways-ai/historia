@@ -4,18 +4,22 @@ on:
   push:
     branches:
       - agent/chat-retrieval-collect-app
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
   materialize:
-    if: ${{ github.actor != 'github-actions[bot]' }}
+    if: ${{ github.actor != 'github-actions[bot]' && github.head_ref == 'agent/chat-retrieval-collect-app' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: agent/chat-retrieval-collect-app
       - name: Materialize source bundle
         shell: bash
         run: |
