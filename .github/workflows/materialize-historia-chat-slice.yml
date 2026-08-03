@@ -28,6 +28,17 @@ jobs:
             echo "No bundle to materialize."
             exit 0
           fi
+          wc -c .historia-upload/part-*
+          cat <<'SUMS' | sha256sum --check -
+          c4891380e22a378c05915469085f70b097fd9ac6eadd94c17e9b3a574ad6cc71  .historia-upload/part-00
+          55914083e130182aa94c8cd45583a352a58ec275164559dbc770a763eb131906  .historia-upload/part-01
+          1da84d6570625740ed13e96089ce89e7e41bbae93f4d565f8dc05b2a39722973  .historia-upload/part-02
+          4a66d795efe5a41e0fff1ec9e128b7c3ec20d8ad14962e78297e5f05c3672e3a  .historia-upload/part-03
+          2ab01cddc71a96c5fa45707165bb29e9fb34d68b59cb43fc41a7e7b57501be22  .historia-upload/part-04
+          6d9892e4721b493ee65df7bbe43b2f056ce9bad64bab603aeabaa2f9bf0afb97  .historia-upload/part-05
+          ef7ccf24bfbc6413e770e6337469a559952f59d5ff6b84b93fceb6d1af58fa2c  .historia-upload/part-06
+          0d03879e2b795cbb09d85b752ec5a371d3a3d5e55c76ae35ee258bbbd1de4c8f  .historia-upload/part-07
+          SUMS
           cat .historia-upload/part-* | base64 --decode > /tmp/historia-next.tar.gz
           echo "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035  /tmp/historia-next.tar.gz" | sha256sum --check -
           tar -xzf /tmp/historia-next.tar.gz -C .
