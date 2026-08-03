@@ -7,9 +7,9 @@ const base = `${import.meta.env.BASE_URL.replace(/\/+$/, "")}/`;
   <div class="historian-hero__veil"></div>
   <div class="historian-hero__copy">
     <p class="technical-kicker"><i></i> Open foundation · Apache-2.0</p>
-    <h1>Code remembers.</h1>
-    <p>Historia walks a repository’s commit DAG, analyzes changed blobs once, tracks symbol lineage, and stores deterministic retrieval documents in SQLite. Git remains the source of truth.</p>
-    <div class="hero-links"><a class="action action--raven" href={`${base}getting-started/`}>Start indexing →</a><a class="action" href={`${base}concepts/temporal-index/`}>How it works</a><a class="action" href="https://github.com/greenways-ai/historia">Source ↗</a></div>
-    <div class="hero-command"><code>npm install -g @greenways-ai/historian</code><span>Bun · SQLite · Git</span></div>
+    <h1>Work remembers.</h1>
+    <p>Historia stores code history and AI conversations as reachable Git objects, builds deterministic SQLite retrieval indexes, and gives local agents bounded context with exact provenance.</p>
+    <div class="hero-links"><a class="action action--raven" href={`${base}collect/`}>Collect conversations →</a><a class="action" href={`${base}getting-started/`}>Index code</a><a class="action" href="https://github.com/greenways-ai/historia">Source ↗</a></div>
+    <div class="hero-command"><code>historia-collect install --browser chrome</code><span>Git · SQLite · local-first</span></div>
   </div>
 </section>
