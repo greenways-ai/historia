@@ -1,0 +1,93 @@
+[
+  {
+    "title": "Historia storage",
+    "create_time": 1785792000,
+    "update_time": 1785792120,
+    "mapping": {
+      "root": {
+        "id": "root",
+        "message": null,
+        "parent": null,
+        "children": ["u1"]
+      },
+      "u1": {
+        "id": "u1",
+        "message": {
+          "id": "message-user-1",
+          "author": {"role": "user", "name": null},
+          "create_time": 1785792001,
+          "update_time": null,
+          "content": {"content_type": "text", "parts": ["How should Historia store chats?"]},
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1,
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "root",
+        "children": ["a1", "a2"]
+      },
+      "a1": {
+        "id": "a1",
+        "message": {
+          "id": "message-assistant-1",
+          "author": {"role": "assistant", "name": null},
+          "create_time": 1785792010,
+          "update_time": null,
+          "content": {"content_type": "text", "parts": ["Store one checked-out Markdown file per conversation."]},
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1,
+          "metadata": {"model_slug": "gpt-test"},
+          "recipient": "all"
+        },
+        "parent": "u1",
+        "children": []
+      },
+      "a2": {
+        "id": "a2",
+        "message": {
+          "id": "message-assistant-2",
+          "author": {"role": "assistant", "name": null},
+          "create_time": 1785792020,
+          "update_time": null,
+          "content": {
+            "content_type": "multimodal_text",
+            "parts": [
+              "Use reachable Git blobs and a rebuildable index.",
+              {"content_type": "image_asset_pointer", "asset_pointer": "file-service://asset-1", "width": 640, "height": 480}
+            ]
+          },
+          "status": "finished_successfully",
+          "end_turn": true,
+          "weight": 1,
+          "metadata": {"model_slug": "gpt-test"},
+          "recipient": "all"
+        },
+        "parent": "u1",
+        "children": ["u2"]
+      },
+      "u2": {
+        "id": "u2",
+        "message": {
+          "id": "message-user-2",
+          "author": {"role": "user", "name": null},
+          "create_time": 1785792030,
+          "update_time": null,
+          "content": {"content_type": "text", "parts": ["Why keep the raw provider record?"]},
+          "status": "finished_successfully",
+          "end_turn": null,
+          "weight": 1,
+          "metadata": {},
+          "recipient": "all"
+        },
+        "parent": "a2",
+        "children": []
+      }
+    },
+    "current_node": "u2",
+    "conversation_id": "conversation-1",
+    "is_archived": false,
+    "is_starred": true
+  }
+]

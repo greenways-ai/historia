@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/chat-source-v1.schema.json",
+  "title": "Historia Chat Source v1",
+  "type": "object",
+  "required": ["$schema", "provider", "key", "completeness", "first_observed_at", "last_observed_at", "importer"],
+  "properties": {
+    "$schema": { "const": "historia.chat.source/v1" },
+    "provider": { "type": "string", "minLength": 1 },
+    "key": { "type": "string", "minLength": 1 },
+    "completeness": {
+      "enum": ["full-account-export", "conversation-export", "browser-observed", "cli-native", "user-supplied", "derived"]
+    },
+    "metadata": {},
+    "first_observed_at": { "type": "string", "format": "date-time" },
+    "last_observed_at": { "type": "string", "format": "date-time" },
+    "importer": {
+      "type": "object",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
