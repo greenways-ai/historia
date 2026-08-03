@@ -23,8 +23,16 @@
       },
       "allOf": [
         {
-          "if": { "properties": { "op": { "const": "capture" } } },
-          "then": { "required": ["observation"] }
+          "if": {
+            "properties": { "op": { "const": "capture" } },
+            "required": ["op"]
+          },
+          "then": {
+            "required": ["observation"],
+            "properties": {
+              "observation": { "$ref": "browser-observation-v1.schema.json" }
+            }
+          }
         }
       ],
       "additionalProperties": false
