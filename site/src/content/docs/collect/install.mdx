@@ -1,0 +1,174 @@
+---
+title: Install the browser bridge
+description: Register Historia Collect for Chrome, Chromium, Brave, Edge, or Firefox at user scope.
+---
+import { Aside, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+The `historia-collect` installer connects the unpacked browser extension to the
+local native-messaging host. It discovers or creates the executable path, writes
+the browser manifest, limits it to Historia's stable extension identity, and
+verifies the resulting registration.
+
+## Install
+
+<Tabs>
+  <TabItem label="Chrome">
+    ```bash
+    historia-collect install --browser chrome
+    ```
+  </TabItem>
+  <TabItem label="Chromium">
+    ```bash
+    historia-collect install --browser chromium
+    ```
+  </TabItem>
+  <TabItem label="Brave">
+    ```bash
+    historia-collect install --browser brave
+    ```
+  </TabItem>
+  <TabItem label="Edge">
+    ```bash
+    historia-collect install --browser edge
+    ```
+  </TabItem>
+  <TabItem label="Firefox">
+    ```bash
+    historia-collect install --browser firefox
+    ```
+  </TabItem>
+</Tabs>
+
+Configure several browsers in one operation:
+
+```bash
+historia-collect install \
+  --browser chrome \
+  --browser firefox
+```
+
+The JSON response includes the native-host manifest path, executable or launcher
+path, extension identity, unpacked extension directory, browser extensions page,
+and post-install checks.
+
+## Stable identities
+
+Chromium-family browsers derive the same extension ID on every machine from the
+public key committed in `extension/manifest.json`:
+
+```text
+idfjphfgkpmmgggnbomlalheckgdcefj
+```
+
+Firefox uses:
+
+```text
+historia-collect@greenways.ai
+```
+
+Each native-host manifest permits exactly one of these identities. Unrelated
+extensions cannot invoke the host through that registration.
+
+<Aside type="note" title="Public identity, not a private signing key">
+The repository contains only the public Chromium manifest key needed to derive a
+stable unpacked-extension ID. It does not contain a private extension signing
+key.
+</Aside>
+
+## Load the unpacked extension
+
+<Steps>
+1. Open the extensions page reported by the installer.
+
+   | Browser | Page |
+   | --- | --- |
+   | Chrome / Chromium | `chrome://extensions` |
+   | Brave | `brave://extensions` |
+   | Microsoft Edge | `edge://extensions` |
+   | Firefox | `about:debugging#/runtime/this-firefox` |
+
+2. Enable developer mode where required.
+
+3. Choose **Load unpacked** and select the extension directory from the installer
+   output. Firefox uses **Load Temporary Add-on** while the extension remains
+   unpacked.
+
+4. Open the Historia Collect popup and choose **Check connection**.
+</Steps>
+
+A successful check crosses the native-messaging boundary and confirms that the
+extension identity, browser manifest, executable, and host protocol agree.
+
+## Diagnose
+
+```bash
+historia-collect doctor --browser chrome
+```
+
+The diagnostic exits non-zero when any requested registration is invalid. It
+checks that:
+
+- the manifest exists and parses;
+- the host name is `ai.greenways.historia_collect`;
+- the extension allowlist is exact;
+- the referenced host exists and is executable;
+- the Windows current-user registry entry exists where applicable;
+- the unpacked extension directory is available.
+
+## Host resolution
+
+The installer chooses the native host in this order:
+
+1. `--host-path <absolute-path>`;
+2. `HISTORIA_COLLECT_HOST`;
+3. a compiled `historia-collect-host` beside the running executable;
+4. `dist/historia-collect-host` inside the package;
+5. on macOS and Linux, an owner-only launcher using the absolute Bun runtime and
+   package-native entry path.
+
+Windows requires a compiled `historia-collect-host.exe` or an explicit
+`--host-path`.
+
+## Registration locations
+
+The installer uses standard user-scoped locations and does not require
+administrator privileges:
+
+| Platform | Registration |
+| --- | --- |
+| macOS | Browser `NativeMessagingHosts` directory beneath `~/Library/Application Support`. |
+| Linux | Browser directory beneath `~/.config`; Firefox uses `~/.mozilla/native-messaging-hosts`. |
+| Windows | Manifest beneath `%LOCALAPPDATA%\Historia` and a browser-specific `HKCU` registry entry. |
+
+## Remove the bridge
+
+```bash
+historia-collect uninstall \
+  --browser chrome \
+  --browser firefox
+```
+
+This removes the selected manifests and Windows registry entries. It does not
+delete the Git vault, SQLite index, imported conversations, or extension
+settings.
+
+## Packaging-system integration
+
+Use an explicit host path when Homebrew, a system package, or another installer
+owns executable placement:
+
+```bash
+historia-collect install \
+  --browser chrome \
+  --host-path /opt/historia/bin/historia-collect-host
+```
+
+The lower-level generator remains available:
+
+```bash
+historia collect native-manifest \
+  --browser chrome \
+  --extension-id idfjphfgkpmmgggnbomlalheckgdcefj \
+  --host-path /absolute/path/to/historia-collect-host \
+  --output /tmp/ai.greenways.historia_collect.json
+```
