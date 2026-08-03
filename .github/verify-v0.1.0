@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "tag": "v0.1.0",
+  "checks": [
+    "github-release-assets",
+    "sha256sums",
+    "npm-registry"
+  ],
+  "requested_at": "2026-08-04"
+}
