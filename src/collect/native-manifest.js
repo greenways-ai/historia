@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
+import { extensionIdentityFor, normalizeBrowser } from "./extension-identity.js";
 
 export const DEFAULT_NATIVE_HOST_NAME = "ai.greenways.historia_collect";
 
@@ -9,20 +10,6 @@ function hostName(value) {
   return name;
 }
 
-function browserKind(value) {
-  const browser = String(value ?? "chrome").toLowerCase();
-  if (!new Set(["chrome", "chromium", "firefox"]).has(browser)) throw new Error(`unsupported browser: ${browser}`);
-  return browser;
-}
-
-function extensionIdentity(value, browser) {
-  const identity = String(value ?? "").trim();
-  if (!identity || /[\0\r\n]/.test(identity)) throw new Error("extension identity is required");
-  if (browser === "firefox") return identity;
-  if (!/^[a-p]{32}$/.test(identity)) throw new Error("Chrome extension ID must be 32 lowercase letters from a to p");
-  return `chrome-extension://${identity}/`;
-}
-
 export function createNativeHostManifest({
   browser = "chrome",
   extensionId,
@@ -30,7 +17,7 @@ export function createNativeHostManifest({
   name = DEFAULT_NATIVE_HOST_NAME,
   description = "Historia Collect native messaging host"
 } = {}) {
-  const kind = browserKind(browser);
+  const kind = normalizeBrowser(browser);
   if (!hostPath) throw new Error("hostPath is required");
   if (!isAbsolute(hostPath)) throw new Error("native host path must be absolute");
   const absolutePath = resolve(hostPath);
@@ -40,9 +27,9 @@ export function createNativeHostManifest({
     path: absolutePath,
     type: "stdio"
   };
-  const identity = extensionIdentity(extensionId, kind);
+  const identity = extensionIdentityFor(kind, extensionId);
   if (kind === "firefox") manifest.allowed_extensions = [identity];
-  else manifest.allowed_origins = [identity];
+  else manifest.allowed_origins = [`chrome-extension://${identity}/`];
   return manifest;
 }
 
