@@ -1,0 +1,161 @@
+---
+title: Releases and standalone binaries
+description: Download, verify, extract, and run Historia without a separate Bun or Node.js installation.
+---
+import { Aside, Card, CardGrid, Steps, Tabs, TabItem } from "@astrojs/starlight/components";
+
+Historia releases combine the code-history CLI, conversation archive, browser
+collector, native host, analyzers, agent skills, specifications, and operational
+documentation into platform-specific archives.
+
+<CardGrid>
+  <Card title="Linux">
+    Baseline x64 and native ARM64 `tar.gz` archives.
+  </Card>
+  <Card title="macOS">
+    Intel x64 and Apple Silicon ARM64 `tar.gz` archives.
+  </Card>
+  <Card title="Windows">
+    Baseline x64 and native ARM64 ZIP archives.
+  </Card>
+  <Card title="Browser extension">
+    A separate extension ZIP, also embedded inside the Collect installer.
+  </Card>
+</CardGrid>
+
+## Release files
+
+```text
+historia-v<version>-linux-x64.tar.gz
+historia-v<version>-linux-arm64.tar.gz
+historia-v<version>-darwin-x64.tar.gz
+historia-v<version>-darwin-arm64.tar.gz
+historia-v<version>-windows-x64.zip
+historia-v<version>-windows-arm64.zip
+historia-collect-extension-v<version>.zip
+release-manifest-v1.json
+SHA256SUMS
+```
+
+Each platform archive carries four executables:
+
+```text
+gw-historian
+historia
+historia-collect
+historia-collect-host
+```
+
+The code-history analyzers and supporting files are included beside `bin/`.
+Keep the extracted directory structure intact when running `gw-historian`.
+
+## Verify before extraction
+
+<Steps>
+1. Download the platform archive and `SHA256SUMS` from the same release.
+2. Verify the selected file.
+
+   <Tabs>
+     <TabItem label="Linux">
+       ```bash
+       sha256sum --check SHA256SUMS --ignore-missing
+       ```
+     </TabItem>
+     <TabItem label="macOS">
+       ```bash
+       shasum -a 256 -c SHA256SUMS
+       ```
+     </TabItem>
+     <TabItem label="PowerShell">
+       ```powershell
+       $expected = (Get-Content SHA256SUMS | Select-String "windows-x64.zip").ToString().Split()[0]
+       $actual = (Get-FileHash .\historia-v0.1.0-windows-x64.zip -Algorithm SHA256).Hash.ToLower()
+       if ($actual -ne $expected) { throw "Historia archive checksum mismatch" }
+       ```
+     </TabItem>
+   </Tabs>
+
+3. Inspect `release-manifest-v1.json` when automated tooling needs the source
+   commit, compiler version, target, size, or extension identity.
+4. Extract only after the digest matches.
+</Steps>
+
+## Run an extracted release
+
+<Tabs>
+  <TabItem label="Linux / macOS">
+    ```bash
+    tar -xzf historia-v0.1.0-linux-x64.tar.gz
+    cd historia-v0.1.0-linux-x64
+    ./bin/historia vault init
+    ./bin/historia-collect install --browser chrome
+    ./bin/historia collect serve
+    ```
+  </TabItem>
+  <TabItem label="Windows">
+    ```powershell
+    Expand-Archive .\historia-v0.1.0-windows-x64.zip
+    Set-Location .\historia-v0.1.0-windows-x64
+    .\bin\historia.exe vault init
+    .\bin\historia-collect.exe install --browser edge
+    ```
+  </TabItem>
+</Tabs>
+
+The Collect installer finds the sibling native host automatically. Its complete
+browser extension is embedded in the executable and materialized into Historia's
+local configuration directory with per-file checksum verification.
+
+No separate Bun, Node.js, npm, or browser-host download is needed for the
+standalone archive.
+
+## Browser extension ZIP
+
+The separate extension archive is useful for source inspection and packaging.
+Normal users can run:
+
+```bash
+historia-collect paths
+```
+
+This writes the exact bundled extension payload to a stable unpacked directory
+and reports its digest and browser identities.
+
+## Build without publishing
+
+```bash
+bun install --frozen-lockfile
+bun run release:build
+```
+
+Select only specific targets during local development:
+
+```bash
+bun run release:build -- \
+  --target linux-x64 \
+  --target darwin-arm64
+```
+
+The builder cross-compiles, verifies archive layouts, executes host-compatible
+smoke tests, generates `BUILD-INFO.json` inside each package, and writes the
+release manifest and SHA-256 sums under `dist/release/`.
+
+A manual **Build release artifacts** workflow run produces all targets as a
+time-limited workflow artifact without publishing a GitHub Release.
+
+## Tagged publication
+
+A matching `v*` tag validates that the tag and `package.json` version agree,
+then:
+
+1. publishes the npm package through Trusted Publishing;
+2. cross-compiles all standalone targets;
+3. verifies archives and the embedded extension;
+4. creates or updates the GitHub Release with the complete asset set.
+
+<Aside type="caution" title="Current signing status">
+Standalone archives are SHA-256 checked but are not yet Apple-notarized,
+Authenticode-signed, or accompanied by Sigstore attestations. Verify the
+published checksums. Prefer npm or Homebrew when platform trust integration is
+required, or build from a reviewed source revision.
+</Aside>

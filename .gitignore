@@ -1,6 +1,7 @@
 .greenways-historian/
 node_modules/
 .DS_Store
+/dist/
 /site/node_modules/
 /site/dist/
 /site/.astro/
