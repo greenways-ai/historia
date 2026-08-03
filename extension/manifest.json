@@ -3,6 +3,7 @@
   "name": "Historia Collect",
   "version": "0.1.0",
   "description": "Archive explicitly captured ChatGPT conversations into a local Git-native Historia vault.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA40TTKEwVgyo4OMSE4VlQdYX/8/gMxA6pZuZyJd4hCzaINv3LaOHlcM9GxVeiMGm4IyZOdp6HhWP/cgU2KSgn2nl10e3ngw5vQ4xEnRoconN5/OgFgitYKpxGcoHTLmhji6X7PkXmTmq24eVG9BvoFurm4IzcEQPY+tjX7hc73AoYfHQ3p5lVv5HU7g+/v4dM9GgUmDL5rhpPUmZR6InbEmcPxleOnKTBAAiVHgb4Y7igGGgXTC5CC/iYc9JSScEWs1V6CZkmIkIYmUMr4LH8x/027139GQJSYNOoxhu7MBfoErVB4K1zLj/LopCEbxSEMRPoVXAcgz1G4vMyYbkpVQIDAQAB",
   "permissions": [
     "nativeMessaging",
     "storage",
