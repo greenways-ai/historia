@@ -10,8 +10,8 @@ export default defineConfig({
     starlight({
       title: "Historia",
       description: "Git-native temporal code indexing, history, lineage, and structural similarity.",
-      logo: { src: "./public/favicon.svg", replacesTitle: false },
-      favicon: "/favicon.svg",
+      logo: { src: "./public/sigil.svg", replacesTitle: false },
+      favicon: "/historia/sigil.svg",
       customCss: ["./src/styles/custom.css"],
       components: {
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",
