@@ -29,7 +29,7 @@ permissions:
 
 concurrency:
   group: historia-release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   RELEASE_BUN_VERSION: 1.3.14
