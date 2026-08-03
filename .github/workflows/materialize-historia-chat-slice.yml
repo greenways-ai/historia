@@ -29,26 +29,62 @@ jobs:
             exit 0
           fi
 
-          cat \
-            .historia-upload/p00-0 \
-            .historia-upload/p00-1 \
-            .historia-upload/p00-2 \
-            .historia-upload/part-01 \
-            .historia-upload/part-02 \
-            .historia-upload/p03-0 \
-            .historia-upload/p03-1 \
-            .historia-upload/p03-2-0 \
-            .historia-upload/p03-2-1 \
-            .historia-upload/p03-2-2 \
-            .historia-upload/p03-2-3 \
-            .historia-upload/part-04 \
-            .historia-upload/part-05 \
-            .historia-upload/part-06 \
-            .historia-upload/p07-0 \
-            .historia-upload/p07-1 \
-            | base64 --decode > /tmp/historia-next.tar.gz
+          python3 - <<'PY'
+          from __future__ import annotations
 
-          echo "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035  /tmp/historia-next.tar.gz" | sha256sum --check -
+          import base64
+          import hashlib
+          from pathlib import Path
+
+          parts = [
+              ".historia-upload/p00-0",
+              ".historia-upload/p00-1",
+              ".historia-upload/p00-2",
+              ".historia-upload/part-01",
+              ".historia-upload/part-02",
+              ".historia-upload/p03-0",
+              ".historia-upload/p03-1",
+              ".historia-upload/p03-2-0",
+              ".historia-upload/p03-2-1",
+              ".historia-upload/p03-2-2",
+              ".historia-upload/p03-2-3",
+              ".historia-upload/part-04",
+              ".historia-upload/part-05",
+              ".historia-upload/part-06",
+              ".historia-upload/p07-0",
+              ".historia-upload/p07-1",
+          ]
+          alphabet = set(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=")
+          whitespace = set(b" \t\r\n")
+          chunks = []
+          for name in parts:
+              raw = Path(name).read_bytes()
+              invalid = [(index, byte) for index, byte in enumerate(raw) if byte not in alphabet and byte not in whitespace]
+              print(f"{name}: bytes={len(raw)} invalid={len(invalid)}")
+              for index, byte in invalid[:20]:
+                  start = max(0, index - 12)
+                  end = min(len(raw), index + 13)
+                  print(f"  offset={index} byte=0x{byte:02x} context={raw[start:end]!r}")
+              chunks.append(raw)
+
+          joined = b"".join(chunks)
+          normalized = bytes(byte for byte in joined if byte not in whitespace)
+          invalid = [(index, byte) for index, byte in enumerate(normalized) if byte not in alphabet]
+          print(f"joined={len(joined)} normalized={len(normalized)} mod4={len(normalized) % 4} invalid={len(invalid)}")
+          if invalid:
+              raise SystemExit("staged bundle contains non-base64 bytes")
+          try:
+              decoded = base64.b64decode(normalized, validate=True)
+          except Exception as error:
+              raise SystemExit(f"strict base64 decode failed: {error}") from error
+          digest = hashlib.sha256(decoded).hexdigest()
+          print(f"decoded={len(decoded)} sha256={digest}")
+          expected = "6ce9a2b2cfdfd05591158e595c8b49f4575d155f7e5dba594882f62ada0b4035"
+          if digest != expected:
+              raise SystemExit(f"archive digest mismatch: expected {expected}, found {digest}")
+          Path("/tmp/historia-next.tar.gz").write_bytes(decoded)
+          PY
+
           tar -tzf /tmp/historia-next.tar.gz >/dev/null
           tar -xzf /tmp/historia-next.tar.gz -C .
           rm -rf .historia-upload
