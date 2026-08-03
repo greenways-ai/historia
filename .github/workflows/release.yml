@@ -12,7 +12,6 @@ on:
       - "analyzers/**"
       - "skills/**"
       - "spec/**"
-      - "docs/**"
       - "package.json"
       - "bun.lock"
   workflow_dispatch:
