@@ -3,11 +3,17 @@
 import { parseArgs } from "node:util";
 import {
   SUPPORTED_BROWSERS,
+  defaultCollectConfigRoot,
   doctorCollect,
   installCollect,
-  resolveExtensionDirectory,
   uninstallCollect
 } from "./install.js";
+import {
+  COLLECT_EXTENSION_BUNDLE_SHA256,
+  defaultCollectExtensionDirectory,
+  inspectCollectExtensionBundle,
+  materializeCollectExtension
+} from "./extension-bundle.js";
 import { CHROMIUM_EXTENSION_ID, FIREFOX_EXTENSION_ID } from "./extension-identity.js";
 
 const VERSION = "0.1.0";
@@ -31,12 +37,16 @@ Options:
   --browser <name>       Browser to configure; repeat to configure more than one
   --extension-id <id>   Override the stable extension identity for one browser
   --host-path <path>     Explicit compiled native host path
-  --extension-path <p>  Explicit unpacked extension directory
+  --extension-path <p>  Use an explicit unpacked extension directory
   --config-root <path>  Override Historia's local configuration directory
   --manifest-root <p>   Override browser manifest roots (testing/portable use)
 
+Without --extension-path, the checksum-verified extension bundled into this
+executable is materialized below Historia's local configuration directory.
+
 Chromium extension ID: ${CHROMIUM_EXTENSION_ID}
 Firefox extension ID:  ${FIREFOX_EXTENSION_ID}
+Extension bundle SHA:  ${COLLECT_EXTENSION_BUNDLE_SHA256}
 `);
 }
 
@@ -48,15 +58,23 @@ function selectedBrowsers(values) {
   return requested;
 }
 
-function options(values) {
+function baseOptions(values) {
+  const configRoot = values["config-root"] ?? defaultCollectConfigRoot();
   return {
     browsers: selectedBrowsers(values),
     extensionId: values["extension-id"],
     hostPath: values["host-path"],
-    extensionPath: values["extension-path"],
-    configRoot: values["config-root"],
+    extensionPath: values["extension-path"] ?? defaultCollectExtensionDirectory(configRoot),
+    configRoot,
     manifestRoot: values["manifest-root"]
   };
+}
+
+async function installOptions(values) {
+  const options = baseOptions(values);
+  if (values["extension-path"]) return { options, extensionBundle: null };
+  const extensionBundle = await materializeCollectExtension(options.extensionPath);
+  return { options, extensionBundle };
 }
 
 function emit(value) {
@@ -90,25 +108,32 @@ async function main() {
 
   const command = positionals[0];
   if (command === "install") {
-    const result = await installCollect(options(values));
-    emit(result);
+    const prepared = await installOptions(values);
+    const result = await installCollect(prepared.options);
+    emit({ ...result, extensionBundle: prepared.extensionBundle });
     if (!result.ok) process.exitCode = 1;
     return;
   }
   if (command === "doctor") {
-    const result = await doctorCollect(options(values));
-    emit(result);
+    const options = baseOptions(values);
+    const result = await doctorCollect(options);
+    const extensionBundle = values["extension-path"]
+      ? null
+      : await inspectCollectExtensionBundle(options.extensionPath);
+    emit({ ...result, extensionBundle });
     if (!result.ok) process.exitCode = 1;
     return;
   }
   if (command === "uninstall") {
-    emit(await uninstallCollect(options(values)));
+    emit(await uninstallCollect(baseOptions(values)));
     return;
   }
   if (command === "paths") {
+    const prepared = await installOptions(values);
     emit({
       ok: true,
-      extensionDirectory: await resolveExtensionDirectory({ extensionPath: values["extension-path"] }),
+      extensionDirectory: prepared.options.extensionPath,
+      extensionBundle: prepared.extensionBundle,
       chromiumExtensionId: CHROMIUM_EXTENSION_ID,
       firefoxExtensionId: FIREFOX_EXTENSION_ID,
       supportedBrowsers: SUPPORTED_BROWSERS
