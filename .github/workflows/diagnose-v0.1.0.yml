@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   diagnose:
@@ -59,3 +60,45 @@ jobs:
               echo "- npm package: unavailable"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Inspect the bootstrap workflow and npm job log
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set +e
+          echo "::group::Bootstrap workflow"
+          gh api \
+            "repos/$GITHUB_REPOSITORY/actions/workflows/bootstrap-v0.1.0.yml/runs?branch=main&per_page=10" \
+            > /tmp/bootstrap-runs.json 2>/tmp/bootstrap-runs.err
+          api_code=$?
+          echo "runs_api_exit_code=$api_code"
+          cat /tmp/bootstrap-runs.err 2>/dev/null || true
+
+          run_id="$(jq -r '.workflow_runs | map(select(.name == "Bootstrap Historia v0.1.0")) | .[0].id // empty' /tmp/bootstrap-runs.json 2>/dev/null)"
+          echo "run_id=${run_id:-missing}"
+          if [ -n "$run_id" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id" \
+              --jq '{id,name,event,status,conclusion,created_at,updated_at,html_url,head_sha}' || true
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run_id/jobs?per_page=100" \
+              > /tmp/bootstrap-jobs.json 2>/tmp/bootstrap-jobs.err
+            cat /tmp/bootstrap-jobs.err 2>/dev/null || true
+            jq '.jobs | map({id,name,status,conclusion,started_at,completed_at,steps: [.steps[] | {name,status,conclusion}]})' /tmp/bootstrap-jobs.json 2>/dev/null || true
+
+            npm_job_id="$(jq -r '.jobs | map(select(.name == "npm-publish")) | .[0].id // empty' /tmp/bootstrap-jobs.json 2>/dev/null)"
+            echo "npm_job_id=${npm_job_id:-missing}"
+            if [ -n "$npm_job_id" ]; then
+              gh api "repos/$GITHUB_REPOSITORY/actions/jobs/$npm_job_id/logs" \
+                > /tmp/bootstrap-npm-job.log 2>/tmp/bootstrap-npm-job.err
+              echo "--- npm-publish job log tail ---"
+              tail -n 400 /tmp/bootstrap-npm-job.log 2>/dev/null || true
+              cat /tmp/bootstrap-npm-job.err 2>/dev/null || true
+            fi
+          fi
+          echo "::endgroup::"
+
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "bootstrap_npm_token_configured=true"
+          else
+            echo "bootstrap_npm_token_configured=false"
+          fi
