@@ -17,7 +17,7 @@ undocumented ChatGPT APIs.
 ```text
 ChatGPT tab
   → content script
-  → extension service worker
+  → extension background context
   → native messaging
   → historia-collect-host
   → Git source ref
@@ -26,10 +26,11 @@ ChatGPT tab
 
 <Steps>
 1. [Install the browser bridge](../install/).
-2. Open a ChatGPT conversation.
-3. Open the Historia Collect popup.
-4. Choose **Collect this conversation**.
-5. Confirm that the popup reports the archive commit and refreshed index.
+2. Read the [privacy and data-handling disclosure](../privacy/).
+3. Open a ChatGPT conversation.
+4. Open the Historia Collect popup.
+5. Choose **Collect this conversation**.
+6. Confirm that the popup reports the archive commit and refreshed index.
 </Steps>
 
 The host commits browser observations to a source ref beneath:
@@ -44,15 +45,37 @@ it appears in refs or tree paths.
 ## Manual and automatic collection
 
 Manual collection is the default. It creates an explicit user action for each
-captured conversation.
+captured conversation, and the popup states that the rendered conversation is
+sent to a native host on the same computer.
 
 Automatic collection can be enabled in extension settings. It is opt-in,
 debounced after rendered-message changes, and still captures only tabs matching
-the permitted ChatGPT origins.
+the permitted ChatGPT origins. The settings page repeats the local-transfer
+disclosure before the preference is saved.
 
 Exact content duplicates are idempotent. Observing the same normalized
 conversation later does not create a duplicate transaction merely because the
 observation timestamp changed.
+
+## Firefox consent
+
+Firefox 140 or newer is required. The extension uses Firefox's built-in consent
+model and declares:
+
+```text
+browsingActivity
+personalCommunications
+websiteContent
+```
+
+These categories represent the current ChatGPT page identity, rendered chat
+messages, and visible page content transferred to
+`ai.greenways.historia_collect` on the same computer. They do not mean that
+Greenways receives the data.
+
+The same Manifest V3 source remains compatible with Chromium-family browsers:
+Chromium uses `background.service_worker`, while Firefox uses
+`background.scripts`.
 
 ## Conversation graphs
 
@@ -103,6 +126,11 @@ The extension page and content script are treated as untrusted inputs. The host:
 - checks the extension caller against the native-manifest identity;
 - uses atomic compare-and-swap Git ref updates;
 - writes no network remote unless the user separately configures one.
+
+The extension requests only `nativeMessaging`, `storage`, and `tabs`, plus
+content-script access to the declared ChatGPT origins. It does not request
+cookies, history, proxy, debugger, management, web-request interception,
+geolocation, downloads, or unlimited storage.
 
 ## Live connection check
 
