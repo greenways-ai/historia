@@ -1,66 +1,157 @@
-# Historian
+# Historia
 
-Git-native temporal code indexing, history, lineage, and structural similarity.
+Git-native temporal memory for code, AI conversations, and local agent context.
 
-Greenways Historian walks a repository's commit DAG, analyzes changed blobs
-once, tracks symbol lineage, and stores deterministic retrieval documents in
-SQLite. Git remains the source of truth. No LLM, MCP server, Ollama, Qdrant, or
-embedding service is required for the core workflow.
+Historia stores authoritative content and ancestry in Git, then builds local,
+rebuildable SQLite projections for fast search, lineage, and bounded retrieval.
+The core workflow requires no LLM, MCP server, vector database, embedding
+provider, or remote service.
 
-## Requirements
+## What Historia includes
 
-- Bun 1.2.18 or newer
-- Git 2.43 or newer
-- Python 3.10 or newer for Python analysis (standard library only)
-- Babashka 1.12.218 or newer for Clojure analysis
-- clj-kondo for the primary Clojure analyzer
+- **Historian** walks a repository's complete commit DAG, analyzes changed blobs
+  once, follows symbols through revisions, and retrieves historical code with
+  exact commit provenance.
+- **Historia Chat Archive** imports official ChatGPT exports without flattening
+  regenerated branches or overwriting edited message revisions.
+- **Historia Collect** captures explicitly selected rendered ChatGPT
+  conversations through a restricted local browser bridge.
+- **Context bundles** give Codex, Kimi, and other local agents bounded,
+  token-aware access to archived conversations without modifying their private
+  session databases.
 
-`rewrite-clj` is a Clojure library distributed through Maven and declared in
-`bb.edn`. Babashka loads it when the rewrite-based analyzer is used; it is not a
-separate executable. The environment check verifies that Babashka can load it.
+Git remains the source of truth. SQLite search indexes, context bundles,
+summaries, and application views are derived projections that can be deleted and
+rebuilt.
 
-## Install
+## Installation
 
-The npm package is a Bun package. npm is the distribution channel, but the CLI
-still runs on Bun because it uses `bun:sqlite`.
+### Standalone release
+
+The public [`v0.1.0` GitHub Release](https://github.com/greenways-ai/historia/releases/tag/v0.1.0)
+contains verified archives for:
+
+```text
+Linux x64 and ARM64
+macOS Intel and Apple Silicon
+Windows x64 and ARM64
+```
+
+Every platform archive contains:
+
+```text
+bin/gw-historian
+bin/historia
+bin/historia-collect
+bin/historia-collect-host
+```
+
+Download the matching archive and `SHA256SUMS`, verify the digest, then keep the
+extracted directory structure intact. See [`docs/releases.md`](docs/releases.md)
+for the full verification and installation workflow.
+
+### npm package
+
+The npm package name is:
+
+```text
+@greenways-ai/historian
+```
+
+The first scoped registry publication needs a one-time granular npm credential
+before token-free Trusted Publishing can be configured. Until that bootstrap is
+complete, use the standalone release or a source checkout rather than assuming
+`npm install` is available.
+
+The exact bootstrap, trusted-publisher configuration, and token-removal process
+is documented in [`docs/npm-publishing.md`](docs/npm-publishing.md).
+
+After npm exposes the package:
 
 ```bash
 npm install -g @greenways-ai/historian
 gw-historian doctor
 ```
 
-Or run it without a global install:
+The npm package is a Bun package: npm is the distribution channel, while the
+installed CLIs run on Bun because they use `bun:sqlite`.
+
+## Requirements for source and npm installations
+
+- Bun 1.2.18 or newer
+- Git 2.43 or newer
+- Python 3.10 or newer for Python analysis
+- Babashka 1.12.218 or newer for Clojure analysis
+- clj-kondo for the primary Clojure analyzer
+
+`rewrite-clj` is a Clojure library declared in `bb.edn` and loaded through
+Babashka. It is not a separate executable.
+
+Standalone binaries embed Bun. The code-history archive still includes Python,
+Babashka, and clj-kondo integrations where those language analyzers are used.
+
+## Conversation memory quick start
+
+Initialize the private local vault:
 
 ```bash
-bunx @greenways-ai/historian doctor
+historia vault init
 ```
 
-For a self-contained executable, build a platform-specific Bun binary:
+Import an official ChatGPT export ZIP, extracted directory, or conversation JSON:
 
 ```bash
-bun build --compile src/cli.js --outfile dist/gw-historian
+historia chat inspect-openai ~/Downloads/chatgpt-export.zip
+historia chat import-openai ~/Downloads/chatgpt-export.zip
 ```
 
-The npm package includes the CLI source, Babashka analyzers, `bb.edn`, specs,
-and the agent skill. Publishing uses npm Trusted Publishing through GitHub
-Actions, with OIDC authentication and automatic provenance. Configure the npm
-package's trusted publisher as `greenways-ai/historian` with workflow filename
-`publish.yml`, then publish a version by pushing a matching `v*` tag. The
-package must already exist on npm before its Trusted Publisher can be configured;
-bootstrap the first release manually if necessary, then use the workflow for
-subsequent releases:
+Build or refresh the rebuildable chat index:
 
 ```bash
-npm version patch
-git push origin main --follow-tags
+historia chat index
 ```
 
-The workflow verifies that the tag matches `package.json`, runs the complete
-project test suite and TypeScript/Python analyzer conformance, validates the
-package contents, and publishes to the public npm registry. No long-lived
-`NPM_TOKEN` is required.
+Search current message revisions:
 
-## Quick start
+```bash
+historia chat search "signed rooms"
+```
+
+Construct a bounded context package:
+
+```bash
+historia context build \
+  "Hestia keys and private rooms" \
+  --budget 12000 \
+  --include-branches
+```
+
+Start the loopback-only Collect application:
+
+```bash
+historia collect serve
+```
+
+Install the browser-to-native bridge:
+
+```bash
+historia-collect install --browser chrome
+historia-collect doctor --browser chrome
+```
+
+The installer supports Chrome, Chromium, Brave, Edge, and Firefox. It embeds the
+complete unpacked extension, materializes it with checksum verification, and
+registers the native host at user scope. See:
+
+- [`docs/collect-install.md`](docs/collect-install.md)
+- [`docs/browser-collect.md`](docs/browser-collect.md)
+- [`docs/collect-app.md`](docs/collect-app.md)
+- [`docs/chat-retrieval.md`](docs/chat-retrieval.md)
+
+## Code-history quick start
+
+Copy the example configuration, initialize the SQLite projection, and index a
+complete Git clone:
 
 ```bash
 cp greenways-historian.example.json greenways-historian.json
@@ -70,7 +161,7 @@ gw-historian index /path/to/repository
 gw-historian update /path/to/repository
 ```
 
-Query the indexed history:
+Query indexed history:
 
 ```bash
 gw-historian search "qualified symbol"
@@ -81,168 +172,120 @@ gw-historian history "example.core/answer"
 gw-historian trace "revision-id"
 ```
 
-The database is stored at `.greenways-historian/index.sqlite` by default. It
-uses SQLite WAL mode and content-addressed analyzer results. Re-running
-`update` processes only new commits and changed blobs.
+The default database is `.greenways-historian/index.sqlite`. It uses SQLite WAL
+mode and content-addressed analyzer results. `update` processes only newly
+reachable commits and changed blobs.
 
-See [`docs/operations.md`](docs/operations.md) for backups, recovery,
-performance sizing, and troubleshooting. See
-[`docs/analyzer-authoring.md`](docs/analyzer-authoring.md) for the analyzer
-protocol and conformance workflow.
+Use a complete clone: shallow histories are rejected because Historia cannot
+make complete ancestry claims from missing Git objects. Keep one independent
+Historian database per repository identity.
 
-## Multiple repositories
+See:
 
-The basic operating model is one Git checkout and one Historian SQLite database
-per repository. Historian analyzes Python, JavaScript/TypeScript, and Clojure
-files automatically based on their extensions.
-
-Use complete clones; shallow clones are rejected because Historian needs the
-repository ancestry:
-
-```bash
-git clone https://github.com/psf/requests.git ~/src/requests
-```
-
-Create a dedicated index directory for each repository. The CLI reads its
-configuration from the current directory and stores the default database there:
-
-```bash
-mkdir -p ~/.local/share/greenways-historian/requests
-cd ~/.local/share/greenways-historian/requests
-cp /path/to/historian/greenways-historian.example.json greenways-historian.json
-```
-
-When the index directory is separate from the Historian checkout, use absolute
-paths for analyzer commands in `greenways-historian.json`:
-
-```json
-{
-  "analyzers": {
-    "python": {
-      "command": ["python3", "/path/to/historian/analyzers/python/src/analyzer.py"],
-      "extensions": [".py", ".pyi", ".pyw"]
-    }
-  }
-}
-```
-
-Keep the JavaScript/TypeScript and Clojure entries too when the repository uses
-those languages. Then initialize and index the repository:
-
-```bash
-gw-historian doctor
-gw-historian init
-gw-historian index ~/src/requests
-```
-
-Query it from the same index directory:
-
-```bash
-gw-historian search "session adapter"
-gw-historian similar "Session"
-gw-historian history "sessions/Session"
-gw-historian changes "authentication"
-gw-historian retrieve "how sessions are configured"
-gw-historian trace "Session" --max-depth 8 --max-paths 32
-```
-
-Python symbols currently use the source file's module basename, so a symbol
-may appear as `sessions/Session` rather than a full package import path.
-
-After new commits, update the same index:
-
-```bash
-cd ~/.local/share/greenways-historian/requests
-gw-historian update ~/src/requests
-```
-
-Only newly reachable commits and changed blobs are processed. Add another
-repository by giving it a separate index directory and database:
-
-```bash
-mkdir -p ~/.local/share/greenways-historian/flask
-cd ~/.local/share/greenways-historian/flask
-cp /path/to/historian/greenways-historian.example.json greenways-historian.json
-gw-historian init
-gw-historian index ~/src/flask
-```
-
-Do not combine unrelated repositories into one Historian database.
-
-The resulting layout can look like this:
-
-```text
-~/.local/share/greenways-historian/repos/
-  foundation-base--<identity-hash>/history.sqlite
-  another-project--<identity-hash>/history.sqlite
-```
-
-Use a checkout-local `.greenways-historian/` directory when the index should
-travel with the project. Repository identity should be based on the canonical
-remote URL rather than only the directory name.
+- [`spec/temporal-index.md`](spec/temporal-index.md)
+- [`docs/operations.md`](docs/operations.md)
+- [`docs/analyzer-authoring.md`](docs/analyzer-authoring.md)
 
 ## Agent skills
 
-The portable skill is
-[`skills/greenways-historian-agent/SKILL.md`](skills/greenways-historian-agent/SKILL.md).
-It tells Codex, Kimi, or another agent how to initialize, update, query, and
-report provenance from the SQLite index.
-
-### Codex
-
-Install it as a user skill:
+Install the conversation-retrieval skill:
 
 ```bash
-mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
-cp -R skills/greenways-historian-agent "${CODEX_HOME:-$HOME/.codex}/skills/"
+historia agent install codex
+historia agent install kimi
 ```
 
-It can also be installed at project scope under `.codex/skills/`.
-
-### Kimi Code CLI
-
-Install it in Kimi's shared skill directory:
+Project scope is also supported:
 
 ```bash
-mkdir -p "${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills"
-cp -R skills/greenways-historian-agent "${KIMI_CODE_HOME:-$HOME/.kimi-code}/skills/"
+historia agent install codex --scope project
+historia agent install kimi --scope project
 ```
 
-For a project-only skill, use `.kimi-code/skills/greenways-historian-agent/`.
-Start a new session and invoke it with `/skill:greenways-historian-agent` when
-manual invocation is preferred.
+The code-history skill remains available under
+[`skills/greenways-historian-agent/`](skills/greenways-historian-agent/), and the
+conversation skill under
+[`skills/historia-chat-agent/`](skills/historia-chat-agent/).
 
-Kimi documentation: <https://www.kimi.com/code/docs/en/kimi-code-cli/customization/skills.html>
+Skills instruct agents to use narrow deterministic retrieval, preserve commit
+and message provenance, distinguish current and historical revisions, and
+report missing analysis instead of inventing history.
+
+## Storage model
+
+A conversation vault is a bare Git repository with source refs such as:
+
+```text
+refs/historia/sources/openai/<source-key-digest>
+refs/historia/sources/openai-browser/<source-key-digest>
+```
+
+One Git commit represents one atomic collection transaction—not one message.
+Trees keep normalized message revisions, raw provider records, conversation
+graphs, assets, source metadata, and import receipts reachable.
+
+Browser captures are classified as `browser-observed`. They prove what Historia
+recorded from a rendered page at a particular archive transaction; they do not
+claim provider authorship or account completeness.
+
+The default vault is local, has no configured remote, and emits no core
+telemetry.
 
 ## Development
 
 ```bash
-bun run doctor
+bun install --frozen-lockfile
 bun run check
 bun run conformance
 bun run conformance:typescript
 bun run conformance:python
 bun run benchmark:validate
-bun run fixture:large /tmp/greenways-historian-large-fixture 250
-bun run fixture:validate /tmp/greenways-historian-large-fixture /tmp/greenways-historian-large.sqlite 250
 ```
 
-The internal `greenways_historian.*` Babashka namespaces are retained as analyzer
-protocol identifiers for compatibility. They are not the public package or
-CLI name.
+Build the primary executables:
+
+```bash
+bun run build:historia-binary
+bun run build:collect-installer-binary
+bun run build:collect-host-binary
+```
+
+Build all standalone release targets:
+
+```bash
+bun run release:build
+```
+
+The release builder cross-compiles six platform archives, verifies layouts,
+executes host-compatible smoke tests, validates the embedded extension, and
+writes `release-manifest-v1.json` plus `SHA256SUMS`.
+
+## npm publishing
+
+Normal tags publish through `.github/workflows/publish.yml` using npm Trusted
+Publishing and GitHub OIDC. The workflow validates package identity, tests,
+analyzers, tarball contents, and the exact immutable registry version.
+
+The first package version uses the manually dispatched **Bootstrap npm package**
+workflow after a short-lived granular `NPM_TOKEN` is added. Once the package
+exists, configure `publish.yml` as its Trusted Publisher, test a later tag, then
+delete the GitHub secret and revoke the token. See
+[`docs/npm-publishing.md`](docs/npm-publishing.md).
+
+## Documentation portal
+
+The complete portal is published at:
+
+```text
+https://opensource.greenways.ai/historia/
+```
+
+The source is under `site/` and is validated in CI with Node 24, Astro, and
+Starlight.
 
 ## License
 
 Apache-2.0
 
-## JavaScript and TypeScript analysis
-
-Historian can analyze JavaScript and TypeScript blobs with the bundled Bun worker. It supports `.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, and `.d.ts` files and emits the same symbol, reference, diagnostic, and structural-feature protocol used by the Clojure analyzer.
-
-The first implementation is intentionally blob-local: it extracts declarations, imports, calls, type references, inheritance, and normalized AST shape without requiring a project build or an LLM. Project-wide module and type resolution can be layered on later without changing the historical storage contract.
-
-## Python analysis
-
-Historian can analyze Python blobs with the bundled `python3` worker. It supports `.py`, `.pyi`, and `.pyw` files and emits declarations, imports, calls, reads, writes, type references, inheritance, diagnostics, and deterministic structural features through the same JSONL analyzer protocol.
-
-The worker uses Python's standard-library `ast` parser and `tokenize` module, so Python analysis does not require installing a third-party AST package. Configure it with `python3 analyzers/python/src/analyzer.py`.
+The Greenways and Historia names, mosaic marks, logos, and authored artwork are
+reserved brand assets as described in [`BRAND.md`](BRAND.md).

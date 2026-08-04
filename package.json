@@ -4,10 +4,10 @@
   "private": false,
   "type": "module",
   "bin": {
-    "gw-historian": "./src/cli.js",
-    "historia": "./src/historia-cli.js",
-    "historia-collect": "./src/collect/install-entry.js",
-    "historia-collect-host": "./src/collect/native-entry.js"
+    "gw-historian": "src/cli.js",
+    "historia": "src/historia-cli.js",
+    "historia-collect": "src/collect/install-entry.js",
+    "historia-collect-host": "src/collect/native-entry.js"
   },
   "files": [
     "src",
@@ -24,12 +24,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/greenways-ai/historian.git"
+    "url": "git+https://github.com/greenways-ai/historia.git"
   },
   "bugs": {
-    "url": "https://github.com/greenways-ai/historian/issues"
+    "url": "https://github.com/greenways-ai/historia/issues"
   },
-  "homepage": "https://github.com/greenways-ai/historian",
+  "homepage": "https://opensource.greenways.ai/historia/",
   "publishConfig": {
     "access": "public"
   },
@@ -40,6 +40,7 @@
     "build:collect-installer-binary": "bun build --compile src/collect/install-entry.js --outfile dist/historia-collect",
     "build:collect-host-binary": "bun build --compile src/collect/native-entry.js --outfile dist/historia-collect-host",
     "release:build": "bun scripts/build-release-artifacts.js",
+    "package:validate": "node scripts/validate-package-metadata.js",
     "test": "bun test",
     "chat:test": "bun test test/chat-archive.test.js test/chat-index.test.js test/chat-schema.test.js test/historia-cli.test.js test/object-batch.test.js",
     "collect:test": "bun test test/collect-browser.test.js test/collect-extension-bundle.test.js test/collect-install.test.js test/collect-server.test.js",
@@ -52,7 +53,7 @@
     "fixture:large": "bun benchmarks/generate-history-fast.js",
     "fixture:typescript": "bun benchmarks/generate-typescript-history.js",
     "fixture:validate:typescript": "bun scripts/validate-typescript-history.js",
-    "check": "bun test && bun run analyzer:test && bb run analyzer:kondo:test",
+    "check": "bun test && bun run package:validate && bun run analyzer:test && bb run analyzer:kondo:test",
     "fixture:validate": "bun scripts/validate-fixture.js",
     "collect:serve": "bun src/historia-cli.js collect serve"
   },

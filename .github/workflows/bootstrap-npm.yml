@@ -1,0 +1,220 @@
+name: Bootstrap npm package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Unpublished package version to bootstrap"
+        required: true
+        default: "0.1.0"
+        type: string
+      source_ref:
+        description: "Immutable source tag or commit containing that version"
+        required: true
+        default: "v0.1.0"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-bootstrap-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  publish-first-version:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_ref }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          bb: 1.12.218
+          clj-kondo: 2026.05.25
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Install the npm bootstrap client
+        run: npm install --global npm@11.18.0
+      - name: Verify immutable source and registry state
+        id: preflight
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          SOURCE_REF: ${{ inputs.source_ref }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          source_sha="$(git rev-parse HEAD)"
+
+          if [ "$package_version" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Source $SOURCE_REF contains package version $package_version, expected $EXPECTED_VERSION"
+            exit 1
+          fi
+          if [ "$SOURCE_REF" = "v$EXPECTED_VERSION" ]; then
+            tag_sha="$(git rev-list -n 1 "$SOURCE_REF")"
+            if [ "$tag_sha" != "$source_sha" ]; then
+              echo "::error::Tag $SOURCE_REF resolves to $tag_sha, but checkout resolved to $source_sha"
+              exit 1
+            fi
+          fi
+
+          package_spec="$package_name@$EXPECTED_VERSION"
+          if npm view "$package_spec" version --json >/tmp/historia-existing-version.json 2>/tmp/historia-existing-version.err; then
+            published="$(node -e "const value=require('/tmp/historia-existing-version.json'); console.log(Array.isArray(value) ? value.at(-1) : value)")"
+            if [ "$published" = "$EXPECTED_VERSION" ]; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+              echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+              echo "$package_spec is already present; the immutable registry version will not be changed."
+              exit 0
+            fi
+          fi
+
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error title=Missing NPM_TOKEN::Create a short-lived granular npm access token with read/write access to the @greenways-ai package scope and Bypass 2FA enabled, add it as the repository secret NPM_TOKEN, then rerun this workflow."
+            exit 1
+          fi
+
+          echo "published=false" >> "$GITHUB_OUTPUT"
+          echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        if: steps.preflight.outputs.published != 'true'
+        run: bun install --frozen-lockfile
+      - name: Validate the tagged source
+        if: steps.preflight.outputs.published != 'true'
+        run: |
+          bun run check
+          bun run conformance
+      - name: Normalize npm-only metadata
+        if: steps.preflight.outputs.published != 'true'
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'package.json';
+          const packageJson = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const expectedVersion = process.env.EXPECTED_VERSION;
+          if (packageJson.version !== expectedVersion) {
+            throw new Error(`package version changed before normalization: ${packageJson.version}`);
+          }
+          packageJson.repository = {
+            type: 'git',
+            url: 'git+https://github.com/greenways-ai/historia.git'
+          };
+          packageJson.bugs = {
+            url: 'https://github.com/greenways-ai/historia/issues'
+          };
+          packageJson.homepage = 'https://opensource.greenways.ai/historia/';
+          packageJson.publishConfig = {
+            ...(packageJson.publishConfig ?? {}),
+            access: 'public'
+          };
+          packageJson.bin = Object.fromEntries(
+            Object.entries(packageJson.bin ?? {}).map(([name, value]) => [name, String(value).replace(/^\.\//, '')])
+          );
+          fs.writeFileSync(path, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
+
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const expected = {
+            repository: 'git+https://github.com/greenways-ai/historia.git',
+            bugs: 'https://github.com/greenways-ai/historia/issues',
+            homepage: 'https://opensource.greenways.ai/historia/'
+          };
+          if (packageJson.repository?.url !== expected.repository) throw new Error('repository URL normalization failed');
+          if (packageJson.bugs?.url !== expected.bugs) throw new Error('bugs URL normalization failed');
+          if (packageJson.homepage !== expected.homepage) throw new Error('homepage normalization failed');
+          for (const [name, value] of Object.entries(packageJson.bin ?? {})) {
+            if (!value || value.startsWith('./') || value.startsWith('/')) throw new Error(`invalid normalized bin ${name}: ${value}`);
+            const source = fs.readFileSync(value, 'utf8');
+            if (!source.startsWith('#!/usr/bin/env bun\n')) throw new Error(`bin ${name} has no Bun shebang`);
+          }
+          console.log(JSON.stringify({
+            package: packageJson.name,
+            version: packageJson.version,
+            repository: packageJson.repository.url,
+            bins: Object.keys(packageJson.bin).sort()
+          }, null, 2));
+          NODE
+
+          git diff -- package.json
+      - name: Validate package contents
+        if: steps.preflight.outputs.published != 'true'
+        run: npm pack --dry-run
+      - name: Publish the first registry version
+        if: steps.preflight.outputs.published != 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          # This one-time bootstrap intentionally uses token authentication without
+          # provenance. Future versions use publish.yml with OIDC trusted publishing
+          # and receive automatic provenance from npm.
+          npm publish --access public
+      - name: Verify registry publication
+        if: steps.preflight.outputs.published != 'true'
+        env:
+          EXPECTED_VERSION: ${{ inputs.version }}
+          PACKAGE_NAME: ${{ steps.preflight.outputs.package_name }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if npm view "$PACKAGE_NAME@$EXPECTED_VERSION" \
+              name version dist.shasum dist.integrity dist.tarball --json \
+              >/tmp/historia-published-package.json 2>/tmp/historia-published-package.err; then
+              version="$(node -e "const value=require('/tmp/historia-published-package.json'); console.log(value.version ?? '')")"
+              if [ "$version" = "$EXPECTED_VERSION" ]; then
+                cat /tmp/historia-published-package.json
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/historia-published-package.err >&2 || true
+          echo "::error::npm did not expose $PACKAGE_NAME@$EXPECTED_VERSION after publication"
+          exit 1
+      - name: Record trusted-publishing handoff
+        if: always()
+        env:
+          VERSION: ${{ inputs.version }}
+          PACKAGE_NAME: ${{ steps.preflight.outputs.package_name }}
+          ALREADY_PUBLISHED: ${{ steps.preflight.outputs.published }}
+          SOURCE_SHA: ${{ steps.preflight.outputs.source_sha }}
+        run: |
+          {
+            echo "## npm bootstrap result"
+            echo
+            echo "- Package: \`${PACKAGE_NAME:-@greenways-ai/historian}\`"
+            echo "- Version: \`$VERSION\`"
+            echo "- Source commit: \`${SOURCE_SHA:-unknown}\`"
+            echo "- Already published before this run: \`${ALREADY_PUBLISHED:-unknown}\`"
+            echo
+            echo "### Required security handoff"
+            echo
+            echo "After the first version exists, configure its npm Trusted Publisher with:"
+            echo
+            echo "- Provider: GitHub Actions"
+            echo "- GitHub organization or user: \`greenways-ai\`"
+            echo "- Repository: \`historia\`"
+            echo "- Workflow filename: \`publish.yml\`"
+            echo "- Allowed action: \`npm publish\`"
+            echo
+            echo "Then test the next tag through \`.github/workflows/publish.yml\`, delete the GitHub secret \`NPM_TOKEN\`, revoke the granular token on npm, and configure package publishing access to disallow traditional tokens."
+          } >> "$GITHUB_STEP_SUMMARY"

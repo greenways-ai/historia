@@ -4,46 +4,104 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: npm-publish
+  group: npm-publish-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.2.18
       - uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: 1.12.218
+          clj-kondo: 2026.05.25
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - name: Install npm trusted-publishing client
-        run: npm install --global npm@latest
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-      - name: Verify release tag
+      - name: Install the npm trusted-publishing client
+        run: npm install --global npm@11.18.0
+      - name: Verify release source and registry state
+        id: preflight
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
-      - name: Run test suite
+          RELEASE_REF: ${{ github.ref_name }}
+          RELEASE_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          expected_tag="v$package_version"
+
+          if [ "$RELEASE_TYPE" = tag ] && [ "$RELEASE_REF" != "$expected_tag" ]; then
+            echo "::error::Tag $RELEASE_REF does not match package version $expected_tag"
+            exit 1
+          fi
+
+          if npm view "$package_name@$package_version" version --json >/tmp/historia-existing-version.json 2>/tmp/historia-existing-version.err; then
+            published="$(node -e "const value=require('/tmp/historia-existing-version.json'); console.log(Array.isArray(value) ? value.at(-1) : value)")"
+            if [ "$published" = "$package_version" ]; then
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+              echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
+              echo "$package_name@$package_version already exists; npm versions are immutable, so this run is a no-op."
+              exit 0
+            fi
+          fi
+
+          echo "published=false" >> "$GITHUB_OUTPUT"
+          echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
+          echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
+      - name: Install dependencies
+        if: steps.preflight.outputs.published != 'true'
+        run: bun install --frozen-lockfile
+      - name: Validate package identity and test suite
+        if: steps.preflight.outputs.published != 'true'
         run: bun run check
       - name: Run analyzer conformance
+        if: steps.preflight.outputs.published != 'true'
         run: |
           bun run conformance:typescript
           bun run conformance:python
       - name: Validate package contents
+        if: steps.preflight.outputs.published != 'true'
         run: npm pack --dry-run
-      - name: Publish to npm with OIDC trusted publishing
+      - name: Publish through npm Trusted Publishing
+        if: steps.preflight.outputs.published != 'true'
         run: npm publish --access public
+      - name: Verify the published registry version
+        if: steps.preflight.outputs.published != 'true'
+        env:
+          PACKAGE_NAME: ${{ steps.preflight.outputs.package_name }}
+          PACKAGE_VERSION: ${{ steps.preflight.outputs.package_version }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 20); do
+            if npm view "$PACKAGE_NAME@$PACKAGE_VERSION" \
+              name version dist.shasum dist.integrity dist.tarball --json \
+              >/tmp/historia-published-package.json 2>/tmp/historia-published-package.err; then
+              version="$(node -e "const value=require('/tmp/historia-published-package.json'); console.log(value.version ?? '')")"
+              if [ "$version" = "$PACKAGE_VERSION" ]; then
+                cat /tmp/historia-published-package.json
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/historia-published-package.err >&2 || true
+          echo "::error::npm did not expose $PACKAGE_NAME@$PACKAGE_VERSION after publication"
+          exit 1
