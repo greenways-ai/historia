@@ -18,10 +18,13 @@ describe("embedded Historia Collect extension", () => {
       const first = await materializeCollectExtension(directory);
       expect(first).toMatchObject({ ok: true, idempotent: false, directory });
       expect(first.bundle_sha256).toBe(COLLECT_EXTENSION_BUNDLE_SHA256);
-      expect(first.files).toBeGreaterThanOrEqual(7);
+      expect(first.files).toBe(8);
 
       const manifest = JSON.parse(await readFile(join(directory, "manifest.json"), "utf8"));
       expect(chromeExtensionIdFromKey(manifest.key)).toBe(CHROMIUM_EXTENSION_ID);
+      const privacy = await readFile(join(directory, "src/privacy.html"), "utf8");
+      expect(privacy).toContain("Historia Collect privacy");
+      expect(privacy).toContain("local Git-native Historia vault");
       expect(await inspectCollectExtensionBundle(directory)).toMatchObject({ ok: true, directory });
 
       const second = await materializeCollectExtension(directory);
