@@ -12,7 +12,10 @@ export default defineConfig({
       description: "Git-native temporal memory for code, conversations, and agent context.",
       logo: { src: "./public/sigil.svg", replacesTitle: false },
       favicon: "/historia/sigil.svg",
-      customCss: ["./src/styles/custom.css"],
+      customCss: [
+        "./src/styles/custom.css",
+        "./src/styles/starlight-shell.css",
+      ],
       components: {
         Header: "./src/components/SharedSiteHeader.astro",
         ThemeProvider: "./src/components/GreenwaysThemeProvider.astro",
