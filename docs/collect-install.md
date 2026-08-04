@@ -20,6 +20,10 @@ edge
 firefox
 ```
 
+Firefox 140 or newer is required. Historia uses Firefox's built-in extension
+consent UI for the rendered page identity, chat messages, and visible website
+content transferred to the local native host.
+
 Configure several browsers in one operation by repeating the option:
 
 ```bash
@@ -68,6 +72,12 @@ After installation, open the extension page reported by the command:
 Enable developer mode where required, choose **Load unpacked**, and select the
 reported extension directory. Firefox uses **Load Temporary Add-on** while the
 extension remains unpacked.
+
+Firefox presents the required data-collection categories when the extension is
+installed. In Historia Collect, this transfer goes to
+`ai.greenways.historia_collect` on the same computer. Review
+[Historia Collect privacy and data handling](collect-privacy.md) before enabling
+automatic collection.
 
 Open the Historia Collect popup and use **Check connection**. A successful ping
 confirms that the extension identity, native manifest, executable, and local

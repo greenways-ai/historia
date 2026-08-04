@@ -1,0 +1,167 @@
+---
+title: Privacy and data handling
+description: Understand exactly what Historia Collect observes, where it sends it, and how local Git retention works.
+---
+import { Aside, Card, CardGrid, Steps } from "@astrojs/starlight/components";
+
+Historia Collect is a local-first archive bridge. It observes the ChatGPT
+conversation currently rendered in a permitted tab, sends a bounded observation
+to a native host on the same computer, and stores the result in the user's local
+Git-native Historia vault.
+
+Historia does not operate a remote collection service for this data.
+
+<CardGrid>
+  <Card title="Rendered content only">
+    Visible messages, code, basic structure, attachment references, and the
+    current ChatGPT page identity can be archived.
+  </Card>
+  <Card title="Local native host">
+    The extension sends observations to `ai.greenways.historia_collect`, not a
+    Greenways cloud endpoint.
+  </Card>
+  <Card title="Manual by default">
+    Automatic collection stays disabled until the user enables it in extension
+    settings.
+  </Card>
+  <Card title="Git retention">
+    The archive is durable. Hide, redact, and purge are different operations.
+  </Card>
+</CardGrid>
+
+## Collected data
+
+A browser observation can include:
+
+- visible user and assistant message text;
+- visible code blocks and basic formatting;
+- visible image or file references and available display metadata;
+- message roles, order, parent relationships, and the active path;
+- the current ChatGPT page origin, path, and title;
+- the private local source label configured for the browser profile.
+
+URL query strings and fragments are removed before archival.
+
+The extension observes rendered content. It does not call undocumented ChatGPT
+APIs to enumerate conversations or branches that the page did not render.
+
+## Local transfer and storage
+
+```text
+ChatGPT page
+  → content script
+  → extension background context
+  → native messaging
+  → local Historia host
+  → local bare Git vault
+  → rebuildable local SQLite index
+```
+
+The native-host manifest permits only Historia Collect's stable extension
+identity. The host validates the complete observation before advancing a Git
+source ref.
+
+The vault has no remote by default. Adding a remote, pushing refs, exporting a
+context bundle, or copying the vault is a separate user-controlled action.
+
+## Excluded data
+
+Historia Collect does not read:
+
+- browser cookies;
+- access tokens, authentication headers, or passwords;
+- browser local-storage or session-storage credentials;
+- unrelated tabs or sites outside the declared ChatGPT origins;
+- unrendered account history through undocumented provider APIs.
+
+It includes no analytics, advertising, attribution, remote model call, cloud
+upload endpoint, or third-party tracking SDK.
+
+<Aside type="note" title="ChatGPT host access is not a cloud destination">
+The extension's ChatGPT host permissions let its content script observe the
+rendered page. Archive transport uses browser native messaging to a local
+executable. Historia does not send captured conversation data to Greenways.
+</Aside>
+
+## Manual and automatic modes
+
+Manual collection is the default:
+
+<Steps>
+1. Open a ChatGPT conversation.
+2. Open the Historia Collect popup.
+3. Review the local-transfer disclosure.
+4. Choose **Collect this conversation**.
+</Steps>
+
+Automatic collection must be enabled in settings. It is debounced after rendered
+message changes and uses the same local host, validation, and idempotence rules.
+
+## Firefox consent
+
+Firefox 140 and newer provide the built-in data-collection consent model used by
+Historia Collect. The manifest declares:
+
+```text
+browsingActivity
+personalCommunications
+websiteContent
+```
+
+These categories describe the current ChatGPT page identity, rendered chat
+messages, and visible page content transferred from the extension to the local
+native host. They do not mean that Greenways receives the data.
+
+Firefox versions before 140 are not supported by this extension build.
+
+## Browser permissions
+
+Historia Collect requests only:
+
+```text
+nativeMessaging
+storage
+tabs
+```
+
+and these ChatGPT page origins:
+
+```text
+https://chatgpt.com/*
+https://www.chatgpt.com/*
+https://chat.openai.com/*
+```
+
+It does not request cookies, history, proxy, debugger, management, web-request
+interception, geolocation, downloads, or unlimited-storage permissions.
+
+## Retention and deletion
+
+Git history is intentionally durable:
+
+| Operation | Meaning |
+| --- | --- |
+| **Hide** | Exclude content from ordinary retrieval. |
+| **Redact** | Produce a safer derived view while retaining the source. |
+| **Purge** | Rewrite refs, expire reflogs, run garbage collection, and repeat on every remote or clone. |
+
+Uninstalling the browser bridge removes its native-host registration. It does
+not delete the vault or SQLite index.
+
+## Verify locally
+
+Materialize and inspect the exact extension carried by the installer:
+
+```bash
+historia-collect paths
+```
+
+Check the Firefox registration and executable:
+
+```bash
+historia-collect doctor --browser firefox
+```
+
+The embedded extension has a deterministic bundle digest and per-file checksums.
+A modified materialized copy is replaced from the compiled payload on the next
+installation operation.

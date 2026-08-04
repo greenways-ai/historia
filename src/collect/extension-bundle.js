@@ -8,6 +8,7 @@ import extensionOptionsHtml from "../../extension/src/options.html" with { type:
 import extensionOptionsJavaScript from "../../extension/src/options.js" with { type: "text" };
 import extensionPopupHtml from "../../extension/src/popup.html" with { type: "text" };
 import extensionPopupJavaScript from "../../extension/src/popup.js" with { type: "text" };
+import extensionPrivacyHtml from "../../extension/src/privacy.html" with { type: "text" };
 
 const RECEIPT_NAME = ".historia-extension.json";
 const BUNDLE_FILES = Object.freeze({
@@ -17,7 +18,8 @@ const BUNDLE_FILES = Object.freeze({
   "src/options.html": extensionOptionsHtml,
   "src/options.js": extensionOptionsJavaScript,
   "src/popup.html": extensionPopupHtml,
-  "src/popup.js": extensionPopupJavaScript
+  "src/popup.js": extensionPopupJavaScript,
+  "src/privacy.html": extensionPrivacyHtml
 });
 
 function sha256(value) {

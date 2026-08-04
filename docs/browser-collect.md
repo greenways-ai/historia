@@ -3,11 +3,15 @@
 Historia Collect includes a local native-messaging host and a Manifest V3
 browser extension. The extension observes only the ChatGPT conversation
 currently rendered in the tab. It does not read cookies, access tokens, browser
-storage, or undocumented provider APIs.
+storage credentials, or undocumented provider APIs.
 
 Browser captures are deliberately classified as `browser-observed`. They are
 useful for collecting new work between official account exports, but they are
 not treated as complete provider snapshots or proof of provider authorship.
+
+Read [Historia Collect privacy and data handling](collect-privacy.md) for the
+complete list of observed fields, excluded credentials, local transfer,
+automatic collection, and Git retention semantics.
 
 ## Install the browser bridge
 
@@ -25,8 +29,8 @@ historia-collect install \
   --browser firefox
 ```
 
-Supported browsers are Chrome, Chromium, Brave, Microsoft Edge, and Firefox.
-The installer:
+Supported browsers are Chrome, Chromium, Brave, Microsoft Edge, and Firefox 140
+or newer. The installer:
 
 - resolves a compiled native host or creates an absolute-Bun launcher on macOS
   and Linux;
@@ -63,18 +67,25 @@ extension and prevents unrelated extensions from invoking the host.
 Open the extension page reported by `historia-collect install`, enable developer
 mode where required, and load the reported `extension/` directory.
 
-Open the extension popup and select **Check connection**. The ping crosses the
-browser native-messaging boundary and confirms that the extension identity,
+Firefox 140 or newer presents built-in consent for the declared categories
+`browsingActivity`, `personalCommunications`, and `websiteContent`. In Historia
+Collect these describe the current ChatGPT page identity, rendered chat
+messages, and visible page content transferred to the local native host—not a
+Greenways cloud service.
+
+Open the Historia Collect popup and select **Check connection**. The ping crosses
+the browser native-messaging boundary and confirms that the extension identity,
 manifest, executable, and host protocol are aligned.
 
 Manual collection is the default:
 
 1. Open a ChatGPT conversation.
-2. Select **Collect this conversation** from the extension popup.
-3. The content script extracts rendered messages and sends a normalized,
-   bounded observation to the extension service worker.
-4. The service worker forwards it to the local native host.
-5. The host validates the observation, commits it to a dedicated
+2. Review the local-transfer disclosure in the popup.
+3. Select **Collect this conversation**.
+4. The content script extracts rendered messages and sends a normalized,
+   bounded observation to the extension background context.
+5. The background context forwards it to the local native host.
+6. The host validates the observation, commits it to a dedicated
    `refs/historia/sources/openai-browser/*` ref, and refreshes the SQLite index.
 
 Automatic collection can be enabled explicitly in the extension settings. It
@@ -164,6 +175,10 @@ The page and content script are treated as untrusted inputs. The native host:
 - rejects credential-shaped metadata fields;
 - uses atomic Git ref updates;
 - keeps the vault local unless the user separately configures Git remotes.
+
+The extension requests only `nativeMessaging`, `storage`, and `tabs`, plus
+content-script access to the declared ChatGPT origins. It contains no analytics,
+advertising, telemetry, cloud upload, or third-party tracking SDK.
 
 Rendered DOM collection is necessarily provider-UI dependent. A later official
 account export can be imported alongside browser observations and reconciled by

@@ -6,21 +6,25 @@
   <title>Historia Collect</title>
   <style>
     :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { width: 300px; margin: 0; padding: 18px; background: #0b1513; color: #fff9e9; }
+    body { width: 320px; margin: 0; padding: 18px; background: #0b1513; color: #fff9e9; }
     h1 { margin: 0 0 6px; font: 400 24px Georgia, serif; }
     p { margin: 0 0 16px; color: #b4ad99; font-size: 13px; line-height: 1.45; }
     button { width: 100%; min-height: 44px; border: 0; background: #5079b4; color: white; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: .55; cursor: wait; }
     #status { min-height: 38px; margin-top: 12px; color: #aec7e8; font: 12px ui-monospace, monospace; white-space: pre-wrap; }
+    .links { display: flex; justify-content: space-between; gap: 12px; }
     a { color: #e0b56f; font-size: 12px; }
   </style>
 </head>
 <body>
   <h1>Historia Collect</h1>
-  <p>Archive the conversation currently rendered in ChatGPT. Nothing is sent to a remote service.</p>
+  <p>Send the rendered ChatGPT conversation to the Historia native host on this computer for storage in your local Git vault. Nothing is sent to Greenways or another remote service.</p>
   <button id="capture" type="button">Collect this conversation</button>
   <div id="status" role="status" aria-live="polite"></div>
-  <a href="#" id="options">Collection settings</a>
+  <div class="links">
+    <a href="#" id="options">Collection settings</a>
+    <a href="privacy.html" target="_blank" rel="noreferrer">Data handling</a>
+  </div>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

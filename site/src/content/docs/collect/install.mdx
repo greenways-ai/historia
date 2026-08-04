@@ -32,7 +32,7 @@ verifies the resulting registration.
     historia-collect install --browser edge
     ```
   </TabItem>
-  <TabItem label="Firefox">
+  <TabItem label="Firefox 140+">
     ```bash
     historia-collect install --browser firefox
     ```
@@ -93,11 +93,22 @@ key.
    output. Firefox uses **Load Temporary Add-on** while the extension remains
    unpacked.
 
-4. Open the Historia Collect popup and choose **Check connection**.
+4. Review the collection disclosure. Firefox 140 or newer presents built-in
+   consent for rendered page identity, chat messages, and visible website
+   content transferred to the local native host.
+
+5. Open the Historia Collect popup and choose **Check connection**.
 </Steps>
 
 A successful check crosses the native-messaging boundary and confirms that the
 extension identity, browser manifest, executable, and host protocol agree.
+
+<Aside type="note" title="The Firefox transfer is local">
+Firefox's declared categories are `browsingActivity`,
+`personalCommunications`, and `websiteContent`. In Historia Collect these
+categories describe data sent to `ai.greenways.historia_collect` on the same
+computer—not a Greenways cloud service. See [Privacy and data handling](../privacy/).
+</Aside>
 
 ## Diagnose
 
