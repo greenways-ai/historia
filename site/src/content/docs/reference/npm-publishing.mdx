@@ -1,0 +1,124 @@
+---
+title: npm publishing
+description: Bootstrap the first scoped package version, then switch Historia to token-free Trusted Publishing.
+---
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+Historia's npm package is:
+
+```text
+@greenways-ai/historian
+```
+
+Normal releases publish from `.github/workflows/publish.yml` using npm Trusted
+Publishing and GitHub OpenID Connect. The workflow stores no npm write token,
+runs the complete validation suite, and leaves an existing immutable registry
+version unchanged.
+
+A package must already exist before its Trusted Publisher can be configured. The
+first scoped version therefore uses the manually dispatched **Bootstrap npm
+package** workflow.
+
+## First-version bootstrap
+
+<Steps>
+1. Sign in to npm as a maintainer who can publish under `@greenways-ai`.
+2. Create a short-lived **Granular Access Token** with read/write access to the
+   `@greenways-ai` package scope and **Bypass 2FA** enabled.
+3. Add the token to the `greenways-ai/historia` Actions secret:
+
+   ```text
+   NPM_TOKEN
+   ```
+
+4. Run **Bootstrap npm package** with:
+
+   ```text
+   version:    0.1.0
+   source_ref: v0.1.0
+   ```
+
+5. Confirm npm exposes the exact package version and integrity metadata.
+</Steps>
+
+The workflow verifies the immutable source ref and package version, exits safely
+when that npm version already exists, fails before the expensive test suite when
+the secret is missing, validates all package contents, and publishes the scoped
+package as public.
+
+The historical `v0.1.0` checkout contained repository metadata for the repository's
+earlier name. The bootstrap applies a deterministic npm-only correction to:
+
+```text
+git+https://github.com/greenways-ai/historia.git
+```
+
+and normalizes package `bin` paths. Runtime source remains the selected immutable
+ref.
+
+<Aside type="caution" title="Bootstrap token scope">
+Grant package or scope write access—not merely npm organization-management
+access. Use the shortest practical expiration and never place the token in a
+workflow file, issue, pull request, Actions variable, or command argument.
+</Aside>
+
+## Configure Trusted Publishing
+
+After the package exists, open its npm package settings and configure:
+
+```text
+Provider:                    GitHub Actions
+GitHub organization/user:    greenways-ai
+Repository:                  historia
+Workflow filename:           publish.yml
+Allowed action:              npm publish
+```
+
+The workflow filename is only `publish.yml`, is case-sensitive, and must match
+the file under `.github/workflows/`.
+
+Current package identity is enforced in CI by:
+
+```bash
+bun run package:validate
+```
+
+The permanent publisher uses Node 24, npm 11.18.0, a GitHub-hosted runner, and
+`id-token: write`. npm exchanges that workflow identity for a short-lived trust
+token and automatically generates provenance for public package releases.
+
+## Remove the bootstrap credential
+
+After a later tag publishes successfully through `publish.yml`:
+
+1. delete the `NPM_TOKEN` GitHub secret;
+2. revoke the granular token on npm;
+3. set package Publishing access to require 2FA and disallow traditional tokens;
+4. retain the GitHub Actions Trusted Publisher.
+
+The npm trust-management CLI cannot use a bypass-2FA granular token to modify a
+package trust relationship. That handoff needs an interactive 2FA-authenticated
+session or the npmjs.com package settings.
+
+## Normal release
+
+```bash
+npm version patch
+git push origin main --follow-tags
+```
+
+For each matching `v*` tag:
+
+- `publish.yml` publishes npm through OIDC;
+- `release.yml` independently produces Linux, macOS, Windows, and extension
+  assets for the GitHub Release.
+
+Both channels validate their exact immutable version and are safe to rerun.
+
+## Current v0.1.0 status
+
+The public GitHub Release and all standalone assets are available. The first npm
+publication remains pending until the short-lived `NPM_TOKEN` is added and the
+bootstrap workflow is run. Package tests, analyzer conformance, and tarball
+validation have already passed; the earlier npm failure was `ENEEDAUTH`, not a
+package rejection.
