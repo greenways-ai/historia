@@ -28,6 +28,7 @@ export default defineConfig({
           { label: "Historia Collect", slug: "collect" },
           { label: "Install the browser bridge", slug: "collect/install" },
           { label: "Browser collection", slug: "collect/browser" },
+          { label: "Privacy & data handling", slug: "collect/privacy" },
           { label: "Local application", slug: "collect/app" },
           { label: "CLI agent context", slug: "collect/cli-agents" }
         ]},
