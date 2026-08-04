@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historia Collect privacy</title>
+  <style>
+    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+    body { max-width: 760px; margin: 48px auto; padding: 0 24px 64px; background: #0b1513; color: #fff9e9; line-height: 1.55; }
+    h1, h2 { font-family: Georgia, serif; font-weight: 400; }
+    h1 { font-size: 38px; margin-bottom: 8px; }
+    h2 { margin-top: 34px; font-size: 24px; }
+    p, li { color: #d1c9b7; }
+    code { color: #aec7e8; }
+    a { color: #e0b56f; }
+    .summary { padding: 16px 18px; border: 1px solid #3b4641; background: #14211e; }
+    .summary strong { color: #fff9e9; }
+  </style>
+</head>
+<body>
+  <h1>Historia Collect privacy</h1>
+  <p class="summary"><strong>Local by design.</strong> Historia Collect sends explicitly captured ChatGPT page content only to the Historia native host installed on this computer. It does not send conversation data to Greenways or another remote service.</p>
+
+  <h2>What collection includes</h2>
+  <p>When you choose <strong>Collect this conversation</strong>, or enable automatic collection, the extension reads the conversation currently rendered in the permitted ChatGPT tab. The local observation can include:</p>
+  <ul>
+    <li>visible user and assistant message text;</li>
+    <li>visible code blocks and basic formatting;</li>
+    <li>visible image or file references and available display metadata;</li>
+    <li>message roles, ordering, parent relationships, and the active conversation path;</li>
+    <li>the current ChatGPT page origin, path, and title;</li>
+    <li>the private local source label configured for this browser profile.</li>
+  </ul>
+  <p>URL query strings and fragments are removed before archival.</p>
+
+  <h2>Where data goes</h2>
+  <p>The extension transmits the bounded observation through browser native messaging to <code>ai.greenways.historia_collect</code>, a local executable registered for the Historia Collect extension identity. The host validates the observation and writes it into your local Git-native Historia vault. A local SQLite index may be rebuilt from that vault for search and context retrieval.</p>
+  <p>Historia configures no remote Git repository by default. Syncing or publishing a vault is a separate user-controlled Git operation.</p>
+
+  <h2>What Historia Collect does not read</h2>
+  <ul>
+    <li>browser cookies;</li>
+    <li>ChatGPT access tokens or authentication headers;</li>
+    <li>passwords;</li>
+    <li>browser local-storage or session-storage credentials;</li>
+    <li>other tabs or websites outside the declared ChatGPT origins;</li>
+    <li>unrendered account history through undocumented provider APIs.</li>
+  </ul>
+
+  <h2>What Historia Collect does not operate</h2>
+  <p>The extension contains no analytics, advertising, telemetry, cloud upload, remote model call, or third-party tracking SDK. The extension's network host permissions are limited to ChatGPT pages so its content script can observe the rendered conversation. Archive writes use the local native-messaging connection.</p>
+
+  <h2>Manual and automatic collection</h2>
+  <p>Manual collection is the default. Automatic collection is disabled until you enable it in settings. When enabled, it is debounced after rendered messages change. Exact duplicate observations remain idempotent.</p>
+
+  <h2>Retention and deletion</h2>
+  <p>Git history is intentionally durable. Removing a conversation from the current view does not erase earlier reachable Git objects. Historia distinguishes:</p>
+  <ul>
+    <li><strong>hide</strong>: exclude content from ordinary retrieval;</li>
+    <li><strong>redact</strong>: create a safer derived view while retaining the source record;</li>
+    <li><strong>purge</strong>: rewrite affected refs, expire reflogs, run garbage collection, and repeat the operation for every remote or clone.</li>
+  </ul>
+  <p>Uninstalling the browser bridge removes its native-host registration. It does not delete the vault or indexed conversations.</p>
+
+  <h2>Firefox data categories</h2>
+  <p>Firefox classifies the local native-messaging transfer under <code>browsingActivity</code>, <code>personalCommunications</code>, and <code>websiteContent</code>. These categories describe the current ChatGPT page identity, rendered chat messages, and visible page content transferred to the local Historia host. They do not indicate remote collection by Greenways.</p>
+
+  <p><a href="options.html">Return to collection settings</a></p>
+</body>
+</html>
