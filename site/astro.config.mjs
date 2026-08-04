@@ -45,6 +45,7 @@ export default defineConfig({
         { label: "Reference", items: [
           { label: "CLI", slug: "reference/cli" },
           { label: "Releases & binaries", slug: "reference/releases" },
+          { label: "npm publishing", slug: "reference/npm-publishing" },
           { label: "Analyzer protocol", slug: "reference/analyzer-protocol" },
           { label: "Agent skill", slug: "reference/agent-skill" }
         ]},
