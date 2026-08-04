@@ -1,0 +1,69 @@
+{
+  "$schema": "historia.release.publication-status/v1",
+  "version": "0.1.0",
+  "tag": "v0.1.0",
+  "source_sha": "546da293db09acaf02887ac555f960ed235a162d",
+  "github_release": {
+    "status": "published",
+    "metadata": {
+      "isDraft": false,
+      "isPrerelease": false,
+      "name": "Historia v0.1.0",
+      "publishedAt": "2026-08-03T23:45:22Z",
+      "tagName": "v0.1.0",
+      "url": "https://github.com/greenways-ai/historia/releases/tag/v0.1.0"
+    },
+    "error": "",
+    "asset_status": "complete",
+    "checksum_status": "verified",
+    "assets": [
+      {
+        "name": "SHA256SUMS",
+        "byte_count": 795
+      },
+      {
+        "name": "historia-collect-extension-v0.1.0.zip",
+        "byte_count": 10418
+      },
+      {
+        "name": "historia-v0.1.0-darwin-arm64.tar.gz",
+        "byte_count": 95967144
+      },
+      {
+        "name": "historia-v0.1.0-darwin-x64.tar.gz",
+        "byte_count": 106224625
+      },
+      {
+        "name": "historia-v0.1.0-linux-arm64.tar.gz",
+        "byte_count": 142976138
+      },
+      {
+        "name": "historia-v0.1.0-linux-x64.tar.gz",
+        "byte_count": 142570501
+      },
+      {
+        "name": "historia-v0.1.0-windows-arm64.zip",
+        "byte_count": 146766084
+      },
+      {
+        "name": "historia-v0.1.0-windows-x64.zip",
+        "byte_count": 152226191
+      },
+      {
+        "name": "release-manifest-v1.json",
+        "byte_count": 2270
+      }
+    ]
+  },
+  "npm": {
+    "status": "missing",
+    "metadata": {
+      "error": {
+        "code": "E404",
+        "summary": "Not Found - GET https://registry.npmjs.org/@greenways-ai%2fhistorian - Not found",
+        "detail": "The requested resource '@greenways-ai/historian@0.1.0' could not be found or you do not have permission to access it.\n\nNote that you can also install from a\ntarball, folder, http url, or git url."
+      }
+    },
+    "error": "npm warn Unknown user config \"always-auth\". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.\nnpm error code E404\nnpm error 404 Not Found - GET https://registry.npmjs.org/@greenways-ai%2fhistorian - Not found\nnpm error 404\nnpm error 404  The requested resource '@greenways-ai/historian@0.1.0' could not be found or you do not have permission to access it.\nnpm error 404\nnpm error 404 Note that you can also install from a\nnpm error 404 tarball, folder, http url, or git url.\nnpm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-08-04T00_05_31_243Z-debug-0.log"
+  }
+}
