@@ -3,7 +3,7 @@ import starlight from "@astrojs/starlight";
 import mdx from "@astrojs/mdx";
 
 export default defineConfig({
-  site: "https://opensource.greenways.ai",
+  site: "https://oss.greenways.ai",
   base: "/historia",
   vite: { build: { assetsInlineLimit: 0 } },
   integrations: [
@@ -55,7 +55,7 @@ export default defineConfig({
         ]},
         { label: "Project", items: [
           { label: "Source ↗", link: "https://github.com/greenways-ai/historia" },
-          { label: "Greenways ↗", link: "https://opensource.greenways.ai/historia/" }
+          { label: "Greenways ↗", link: "https://oss.greenways.ai/historia/" }
         ]}
       ],
       head: [
