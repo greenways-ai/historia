@@ -32,6 +32,18 @@ jobs:
           ./dist/historia-collect --version
       - run: bun run conformance
 
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Lint the Firefox extension source
+        run: npx --yes web-ext@10.5.0 lint --source-dir extension --output text --boring
+
   docs:
     runs-on: ubuntu-latest
     defaults:
