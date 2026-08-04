@@ -7,11 +7,13 @@ capture of rendered ChatGPT conversations.
 - `src/background.js` owns the native-messaging connection and serializes writes.
 - `src/popup.*` provides one-click manual collection and connection checks.
 - `src/options.*` manages the private source key and opt-in automatic collection.
+- `src/privacy.html` discloses collected data, local transport, excluded
+  credentials, automatic collection, and Git retention.
 
 The extension never writes the Git vault directly. It sends a bounded
 `historia.collect.browser-observation/v1` document to
 `ai.greenways.historia_collect`, where the native host validates and archives
-it.
+it on the same computer.
 
 ## Install the local bridge
 
@@ -19,7 +21,7 @@ it.
 historia-collect install --browser chrome
 ```
 
-The installer reports this directory as the unpacked extension source and
+The installer reports the checksum-verified unpacked extension directory and
 registers the native host at user scope. It supports Chrome, Chromium, Brave,
 Microsoft Edge, and Firefox.
 
@@ -41,5 +43,49 @@ Run a post-install diagnostic with:
 historia-collect doctor --browser chrome
 ```
 
-See `docs/collect-install.md` for complete installation details and
-`docs/browser-collect.md` for collection behavior and the security boundary.
+## Firefox consent
+
+Firefox 140 or newer is required. The manifest uses Firefox's built-in extension
+consent model and declares only the categories transferred to the local native
+host:
+
+```text
+browsingActivity
+personalCommunications
+websiteContent
+```
+
+These represent the current ChatGPT page identity, rendered chat messages, and
+visible page content. They do not indicate that Greenways receives the data.
+
+The cross-browser background declaration intentionally contains both:
+
+```json
+{
+  "scripts": ["src/background.js"],
+  "service_worker": "src/background.js",
+  "type": "module"
+}
+```
+
+Firefox uses `scripts`; Chromium-family browsers use `service_worker`.
+
+## Permission boundary
+
+The extension requests only:
+
+```text
+nativeMessaging
+storage
+tabs
+```
+
+and content-script access to the declared ChatGPT origins. It does not request
+cookies, history, proxy, debugger, management, web-request interception,
+geolocation, downloads, or unlimited storage.
+
+See:
+
+- `docs/collect-install.md` for browser registration;
+- `docs/browser-collect.md` for collection behavior;
+- `docs/collect-privacy.md` for the full data and retention policy.
