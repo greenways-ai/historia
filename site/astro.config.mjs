@@ -11,7 +11,7 @@ export default defineConfig({
       title: "Historia",
       description: "Git-native temporal memory for code, conversations, and agent context.",
       logo: { src: "./public/sigil.svg", replacesTitle: false },
-      favicon: "/historia/sigil.svg",
+      favicon: "https://oss.greenways.ai/visual-language/favicons/historia.svg",
       customCss: [
         "./src/styles/custom.css",
         "./src/styles/starlight-shell.css",
