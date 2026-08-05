@@ -1,5 +1,16 @@
 ---
-import SharedHeader from "@greenways-ai/visual-language/SharedHeader.astro";
-const base = import.meta.env.BASE_URL;
+import DocumentationHeader from "@greenways-ai/visual-language/DocumentationHeader.astro";
+
+const base = `${import.meta.env.BASE_URL.replace(/\/+$/, "")}/`;
+const searchBase = base.replace(/\/$/, "");
 ---
-<SharedHeader project="historia" title="Historia" homeHref={base} searchBase={base.replace(/\/$/, "")} nav={[{label:"Start",href:`${base}getting-started/`},{label:"Concepts",href:`${base}concepts/temporal-index/`},{label:"Analyzers",href:`${base}analyzers/languages/`},{label:"Reference",href:`${base}reference/cli/`}]} githubHref="https://github.com/greenways-ai/historia" />
+
+<DocumentationHeader
+  project="historia"
+  title="Historia"
+  homeHref={base}
+  docsHref={`${base}getting-started/`}
+  docsLabel="Docs"
+  searchBase={searchBase}
+  searchLabel="Search Historia documentation"
+/>
