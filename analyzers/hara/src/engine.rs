@@ -199,9 +199,9 @@ fn vector(values: impl IntoIterator<Item = HaraValue>) -> HaraValue {
 
 fn shape_code(source: &str, value: &SpannedForm) -> i64 {
     match &value.form {
-        // rewrite-clj represents keyword literals as generic token nodes, so
-        // the reference structural normalizer reaches its [:symbol] fallback.
-        Form::Keyword(_) => 0,
+        // Keep keyword identity for call filtering. analyzer.hal deliberately
+        // maps this code to the same structural [:symbol] shape as rewrite-clj.
+        Form::Keyword(_) => 1,
         Form::String(_) => 2,
         Form::Number(_) | Form::Float(_) | Form::BigInteger(_) | Form::Decimal(_) => 3,
         Form::Nil | Form::Bool(_) => 4,
