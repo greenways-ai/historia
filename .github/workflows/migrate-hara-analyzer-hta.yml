@@ -35,7 +35,7 @@ jobs:
       - name: Apply the HTA1 migration
         run: python3 .github/scripts/migrate_hara_analyzer_to_hta.py
 
-      - name: Format and test the Hara analyzer
+      - name: Format, test and build the Hara analyzer
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -56,6 +56,7 @@ jobs:
             gh pr comment 55 --repo greenways-ai/historia --body-file /tmp/pr55-hta-failure.md
             exit "$status"
           fi
+          cargo build --release --manifest-path analyzers/hara/Cargo.toml
 
       - name: Install Historia dependencies
         run: bun install --frozen-lockfile
