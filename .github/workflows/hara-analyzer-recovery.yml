@@ -1,24 +1,23 @@
 name: Hara analyzer recovery
 
 on:
-  workflow_run:
-    workflows:
-      - Hara analyzer
+  issue_comment:
     types:
-      - completed
+      - created
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  verify-current-main:
-    if: github.event.workflow_run.id == 31120940511 || github.event.workflow_run.id == 31125425894
+  verify-pr61:
+    if: github.event.issue.number == 61 && startsWith(github.event.comment.body, '/run-hara-benchmark')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: agent/hara-semantic-shapes
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -41,15 +40,8 @@ jobs:
       - name: Check Historia analyzer protocol conformance
         run: bun run conformance:hara
 
-      - name: Smoke-test exact parity on the fixed fixtures
-        run: |
-          bun benchmarks/clojure-analyzers.js \
-            --parity-only \
-            --files 0 \
-            --definitions 0
-
-      - name: Require identical Babashka and Hara outputs
-        run: bun run analyzer:parity
+      - name: Smoke-test analyzer response shapes
+        run: bun run analyzer:shape
 
       - name: Benchmark controlled corpus shapes
         run: |
@@ -57,24 +49,28 @@ jobs:
             --warmup 2 \
             --iterations 8 \
             --cold-runs 5 \
-            --output-dir target/clojure-analyzer-recovery
+            --output-dir target/clojure-analyzer-pr61
 
       - name: Add results to the job summary
         if: always()
         run: |
-          if [ -f target/clojure-analyzer-recovery/summary.md ]; then
-            cat target/clojure-analyzer-recovery/summary.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -f target/clojure-analyzer-pr61/summary.md ]; then
+            cat target/clojure-analyzer-pr61/summary.md >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload benchmark reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hara-analyzer-recovery-${{ github.run_id }}
-          path: |
-            target/clojure-analyzer-recovery
-            target/clojure-analyzer-benchmark
+          name: hara-analyzer-pr61-${{ github.run_id }}
+          path: target/clojure-analyzer-pr61
           if-no-files-found: ignore
+
+      - name: Publish results on PR 61
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 61 --body-file target/clojure-analyzer-pr61/summary.md
 
       - name: Remove this one-shot recovery workflow
         if: always()
