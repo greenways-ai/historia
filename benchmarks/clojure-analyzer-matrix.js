@@ -76,14 +76,46 @@ async function execute(program, args) {
   });
 }
 
+function generatedFile(profile, file) {
+  const definitions = [];
+  for (let index = 0; index < profile.definitions; index++) {
+    definitions.push(`(defn worker-${file}-${index}\n`
+      + `  [value context]\n`
+      + `  (let [next-value (inc value)\n`
+      + `        label (str "item-${file}-${index}-" next-value)\n`
+      + `        attrs {:file ${file} :index ${index} :active true}\n`
+      + `        values [value next-value]]\n`
+      + `    (if (odd? next-value)\n`
+      + `      (assoc context :label label :attrs attrs :values values)\n`
+      + `      (update context :total + next-value))))`);
+  }
+  return `(ns benchmark.generated.file${file}\n`
+    + `  (:require [clojure.string :as str]\n`
+    + `            [clojure.set :as set]))\n\n`
+    + `${definitions.join("\n\n")}\n`;
+}
+
+async function writeProfileCorpus(profile, outputDir) {
+  const corpusDir = path.join(outputDir, "corpora", profile.id);
+  await fs.rm(corpusDir, { recursive: true, force: true });
+  await fs.mkdir(corpusDir, { recursive: true });
+  for (let file = 0; file < profile.files; file++) {
+    await fs.writeFile(
+      path.join(corpusDir, `file_${file}.clj`),
+      generatedFile(profile, file),
+    );
+  }
+  return path.relative(ROOT, corpusDir).split(path.sep).join("/");
+}
+
 async function runProfile(profile, options, outputDir) {
   const json = path.join(outputDir, `${profile.id}.json`);
   const markdown = path.join(outputDir, `${profile.id}.md`);
+  const corpus = await writeProfileCorpus(profile, outputDir);
   console.log(`\n=== ${profile.label}: ${profile.files} files × ${profile.definitions} definitions ===\n`);
   await execute(process.execPath, [
     SINGLE_BENCHMARK,
-    "--files", String(profile.files),
-    "--definitions", String(profile.definitions),
+    "--corpus", corpus,
     "--warmup", String(options.warmup),
     "--iterations", String(options.iterations),
     "--cold-runs", String(options.coldRuns),
@@ -138,16 +170,17 @@ function markdown(entries, options) {
   const lines = [
     "## Hara `hara-rust-full` analyzer scale benchmark",
     "",
-    `Response-shape smoke: **PASS across all ${entries.length} corpus shapes**.`,
+    `Response-shape smoke: **PASS across all ${entries.length} timed corpus shapes**.`,
     "",
-    `Each profile contains ${GENERATED_DEFINITIONS} generated definitions plus `
-      + `${FIXED_SHAPE_FIXTURES} fixed shape fixtures. Only file granularity changes. `
-      + `Measurements use ${options.warmup} warmup, ${options.iterations} timed, and `
-      + `${options.coldRuns} fresh-process cycles per profile.`,
+    `Each timed profile contains ${GENERATED_DEFINITIONS} generated definitions. `
+      + `The ${FIXED_SHAPE_FIXTURES} fixed Clojure/Babashka shape fixtures run separately `
+      + `through \`analyzer:shape\` and are excluded from timing. Only generated file `
+      + `granularity changes. Measurements use ${options.warmup} warmup, `
+      + `${options.iterations} timed, and ${options.coldRuns} fresh-process cycles per profile.`,
     "",
     "### Cold start",
     "",
-    "| Corpus shape | Generated layout | Total files | Source/cycle | Babashka p50 | Hara p50 | Hara advantage |",
+    "| Corpus shape | Generated layout | Timed files | Source/cycle | Babashka p50 | Hara p50 | Hara advantage |",
     "|---|---:|---:|---:|---:|---:|---:|",
   ];
   for (const entry of entries) {
@@ -238,7 +271,7 @@ async function main() {
     generated_at: new Date().toISOString(),
     invariant: {
       generated_definitions_per_profile: GENERATED_DEFINITIONS,
-      fixed_shape_fixtures: FIXED_SHAPE_FIXTURES,
+      fixed_shape_fixtures_smoked_separately: FIXED_SHAPE_FIXTURES,
     },
     options: {
       warmup: options.warmup,
