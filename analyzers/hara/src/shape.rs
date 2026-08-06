@@ -92,7 +92,9 @@ fn decode_tagged(tag: i64, values: &[Form], tokens: &Tokens) -> Result<Shape, St
         109 => one_child("unquote"),
         110 => one_child("unquote-splicing"),
         111 => Ok(vector(vec![keyword("keyword"), Shape::String(token()?)])),
-        112 => Ok(vector(vec![keyword("string")])),
+        // rewrite-clj represents string literals as generic token nodes in the
+        // structural analyzer, so they intentionally share [:symbol] here.
+        112 => Ok(vector(vec![keyword("symbol")])),
         113 => Ok(vector(vec![keyword("number")])),
         114 => Ok(vector(vec![keyword("literal")])),
         115 => Ok(vector(vec![keyword("symbol")])),
@@ -197,5 +199,14 @@ mod tests {
         assert_eq!(nodes.len(), 3);
         assert_eq!(shape_depth(&shape), 3);
         assert_eq!(render(&shape), "[:vector [:keyword \":x\"]]");
+    }
+
+    #[test]
+    fn string_tags_match_rewrite_clj_generic_token_shapes() {
+        let tokens = Tokens::default();
+        let encoded = Form::Vector(vec![Form::Number(112)]);
+        let shape = decode_shape(&encoded, &tokens).expect("decode string shape");
+        assert_eq!(shape, Shape::Vector(vec![Shape::Keyword("symbol".into())]));
+        assert_eq!(render(&shape), "[:symbol]");
     }
 }
