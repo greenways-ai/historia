@@ -208,5 +208,16 @@ mod tests {
         let shape = decode_shape(&encoded, &tokens).expect("decode string shape");
         assert_eq!(shape, Shape::Vector(vec![Shape::Keyword("symbol".into())]));
         assert_eq!(render(&shape), "[:symbol]");
+
+        let features = structural_features(&encoded, &tokens).expect("materialize features");
+        assert_eq!(features["shape"], serde_json::json!("[:symbol]"));
+        assert_eq!(
+            features["shape_hash"],
+            serde_json::json!("bd9994d9ea68613c61d7e45e191c204e68a70f04b253bb00598d2ba05d3b9e20")
+        );
+        assert_eq!(features["features"], serde_json::json!(["[:symbol]"]));
+        assert_eq!(features["node_count"], serde_json::json!(1));
+        assert_eq!(features["depth"], serde_json::json!(1));
+        assert_eq!(features["arity"], serde_json::json!(0));
     }
 }
