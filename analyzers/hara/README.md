@@ -21,6 +21,24 @@ Namespace discovery, import discovery, definition classification, call
 extraction, and structural shape generation execute in `analyzer.hal` through
 `hara-rust-full`.
 
+## Portable HTA1 boundary
+
+The persistent host invokes the compiled `analyze` function through
+`NativeModule::call_hta`, introduced by `hara-lang/hara#355`. It encodes one
+sequential HTA1 argument frame, enters the prepared whole-Wasm module, and
+decodes one HTA1 result frame. Calls between functions inside `analyzer.hal`
+remain in the scoped whole-Wasm value arena and are not repeatedly serialized.
+
+The Hara dependency is pinned to the HTTPS-fetchable merged revision containing
+#355. The compact reader tree deliberately distinguishes heterogeneous
+handle-valued rows (`node-at`) from integer root and child-ID sequences
+(`int-at`). Those schemas let whole-Wasm prove each call and branch
+representation without unchecked casts or changes to the analyzer protocol.
+
+Structural keyword tokens follow rewrite-clj's observed generic-token behavior
+and normalize to `[:symbol]`. This preserves the Babashka analyzer's complete
+shape, feature, depth, node-count, and structural-hash output.
+
 ## Build and run
 
 ```sh
