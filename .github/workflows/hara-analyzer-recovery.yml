@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   verify-current-main:
-    if: github.event.workflow_run.id == 31120940511 && github.event.workflow_run.run_attempt >= 2
+    if: github.event.workflow_run.id == 31120940511 || github.event.workflow_run.id == 31125425894
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
