@@ -2,6 +2,17 @@
 
 The Historia for ChatGPT browser companion is a thin client of the existing `ai.greenways.historia_collect` Native Messaging host. The native provider owns filesystem, Git-vault, and SQLite access on the same computer; the extension never receives general filesystem or shell authority.
 
+## Install or upgrade
+
+The browser companion and native provider are shipped together by the existing Collect installer:
+
+```bash
+historia-collect install --browser chrome
+historia-collect doctor --browser chrome
+```
+
+Rerun `install` after upgrading Historia so the checksum-verified unpacked extension and native-host executable are materialized from the same release. Reload the extension from the browser's extension manager after installation. Chromium-family browsers retain the committed extension ID; Firefox retains `historia-collect@greenways.ai`.
+
 ## Operations
 
 The provider protocol is `historia.native-provider/1` and exposes a closed operation vocabulary:
