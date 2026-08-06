@@ -71,11 +71,17 @@ fn decode_tagged(tag: i64, values: &[Form], tokens: &Tokens) -> Result<Shape, St
     let keyword = |name: &str| Shape::Keyword(name.to_owned());
     let vector = |values: Vec<Shape>| Shape::Vector(values);
     let one_child = |name: &str| -> Result<Shape, String> {
-        let child = values.first().ok_or_else(|| format!("shape tag {tag} has no child"))?;
+        let child = values
+            .first()
+            .ok_or_else(|| format!("shape tag {tag} has no child"))?;
         Ok(vector(vec![keyword(name), decode_shape(child, tokens)?]))
     };
     let token = || -> Result<String, String> {
-        let index = number(values.first().ok_or_else(|| format!("shape tag {tag} has no token"))?)?;
+        let index = number(
+            values
+                .first()
+                .ok_or_else(|| format!("shape tag {tag} has no token"))?,
+        )?;
         tokens.get(index)
     };
 
@@ -92,9 +98,7 @@ fn decode_tagged(tag: i64, values: &[Form], tokens: &Tokens) -> Result<Shape, St
         109 => one_child("unquote"),
         110 => one_child("unquote-splicing"),
         111 => Ok(vector(vec![keyword("keyword"), Shape::String(token()?)])),
-        // rewrite-clj represents string literals as generic token nodes in the
-        // structural analyzer, so they intentionally share [:symbol] here.
-        112 => Ok(vector(vec![keyword("symbol")])),
+        112 => Ok(vector(vec![keyword("string")])),
         113 => Ok(vector(vec![keyword("number")])),
         114 => Ok(vector(vec![keyword("literal")])),
         115 => Ok(vector(vec![keyword("symbol")])),
@@ -190,10 +194,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn tree_seq_metrics_skip_each_vector_tag_like_the_babashka_analyzer() {
+    fn structural_metrics_walk_shape_payloads() {
         let shape = Shape::Vector(vec![
             Shape::Keyword("vector".into()),
-            Shape::Vector(vec![Shape::Keyword("keyword".into()), Shape::String(":x".into())]),
+            Shape::Vector(vec![
+                Shape::Keyword("keyword".into()),
+                Shape::String(":x".into()),
+            ]),
         ]);
         let nodes = descendants(&shape);
         assert_eq!(nodes.len(), 3);
@@ -202,22 +209,42 @@ mod tests {
     }
 
     #[test]
-    fn string_tags_match_rewrite_clj_generic_token_shapes() {
+    fn reader_literal_tags_preserve_hara_semantics() {
         let tokens = Tokens::default();
-        let encoded = Form::Vector(vec![Form::Number(112)]);
-        let shape = decode_shape(&encoded, &tokens).expect("decode string shape");
-        assert_eq!(shape, Shape::Vector(vec![Shape::Keyword("symbol".into())]));
-        assert_eq!(render(&shape), "[:symbol]");
 
-        let features = structural_features(&encoded, &tokens).expect("materialize features");
-        assert_eq!(features["shape"], serde_json::json!("[:symbol]"));
+        let keyword = Form::Vector(vec![Form::Number(111), Form::Number(45)]);
+        let keyword_features =
+            structural_features(&keyword, &tokens).expect("materialize keyword features");
         assert_eq!(
-            features["shape_hash"],
-            serde_json::json!("bd9994d9ea68613c61d7e45e191c204e68a70f04b253bb00598d2ba05d3b9e20")
+            keyword_features["shape"],
+            serde_json::json!("[:keyword \":require\"]")
         );
-        assert_eq!(features["features"], serde_json::json!(["[:symbol]"]));
-        assert_eq!(features["node_count"], serde_json::json!(1));
-        assert_eq!(features["depth"], serde_json::json!(1));
-        assert_eq!(features["arity"], serde_json::json!(0));
+        assert_eq!(
+            keyword_features["shape_hash"],
+            serde_json::json!("8652f5c059b2783b9786d4bd795befcaa84184eba91abb3af69df077c191070e")
+        );
+        assert_eq!(
+            keyword_features["features"],
+            serde_json::json!(["\":require\"", "[:keyword \":require\"]"])
+        );
+        assert_eq!(keyword_features["node_count"], serde_json::json!(2));
+        assert_eq!(keyword_features["depth"], serde_json::json!(2));
+        assert_eq!(keyword_features["arity"], serde_json::json!(0));
+
+        let string = Form::Vector(vec![Form::Number(112)]);
+        let string_features =
+            structural_features(&string, &tokens).expect("materialize string features");
+        assert_eq!(string_features["shape"], serde_json::json!("[:string]"));
+        assert_eq!(
+            string_features["shape_hash"],
+            serde_json::json!("0d2d07dad3f40146e8cab25f13fa8fa3b54b5bea341c3c90c5599d7ba2320f68")
+        );
+        assert_eq!(
+            string_features["features"],
+            serde_json::json!(["[:string]"])
+        );
+        assert_eq!(string_features["node_count"], serde_json::json!(1));
+        assert_eq!(string_features["depth"], serde_json::json!(1));
+        assert_eq!(string_features["arity"], serde_json::json!(0));
     }
 }

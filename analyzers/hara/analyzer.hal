@@ -168,7 +168,7 @@
                       (if (= shape-code 19)
                         (shape-prefix nodes node-id 110)
                         (if (= shape-code 1)
-                          [115]
+                          [111 token]
                           (if (= shape-code 2)
                             [112]
                             (if (= shape-code 3)

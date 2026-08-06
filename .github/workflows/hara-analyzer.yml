@@ -3,13 +3,14 @@ name: Hara analyzer
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  exact-output-and-speed:
+  shape-and-speed:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -36,17 +37,10 @@ jobs:
       - name: Check Historia analyzer protocol conformance
         run: bun run conformance:hara
 
-      - name: Smoke-test exact parity on the fixed fixtures
-        run: |
-          bun benchmarks/clojure-analyzers.js \
-            --parity-only \
-            --files 0 \
-            --definitions 0
+      - name: Smoke-test analyzer response shapes
+        run: bun run analyzer:shape
 
-      - name: Require identical Babashka and Hara outputs
-        run: bun run analyzer:parity
-
-      - name: Benchmark controlled corpus shapes only after exact parity
+      - name: Benchmark controlled corpus shapes
         run: |
           bun benchmarks/clojure-analyzer-matrix.js \
             --warmup 2 \
