@@ -28,6 +28,12 @@ replace(
 
 replace(
     "analyzers/hara/src/engine.rs",
+    "use hara_wasm::lang::protocol::IDisplay;\n",
+    "",
+)
+
+replace(
+    "analyzers/hara/src/engine.rs",
     '''        let input = tree.hara_value();
         let encoded = self
             .module
