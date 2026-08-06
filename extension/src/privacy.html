@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Historia Collect privacy</title>
+  <title>Historia for ChatGPT privacy</title>
   <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { max-width: 760px; margin: 48px auto; padding: 0 24px 64px; background: #0b1513; color: #fff9e9; line-height: 1.55; }
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { max-width: 800px; margin: 48px auto; padding: 0 24px 64px; background: #0b1513; color: #fff9e9; line-height: 1.58; }
     h1, h2 { font-family: Georgia, serif; font-weight: 400; }
     h1 { font-size: 38px; margin-bottom: 8px; }
     h2 { margin-top: 34px; font-size: 24px; }
@@ -18,53 +18,49 @@
   </style>
 </head>
 <body>
-  <h1>Historia Collect privacy</h1>
-  <p class="summary"><strong>Local by design.</strong> Historia Collect sends explicitly captured ChatGPT page content only to the Historia native host installed on this computer. It does not send conversation data to Greenways or another remote service.</p>
+  <h1>Historia for ChatGPT privacy</h1>
+  <p class="summary"><strong>User-controlled and metadata-only.</strong> The companion does not scrape ChatGPT conversations. It saves a normalized conversation URL and page title only after you explicitly choose to bookmark the active tab. Full history enters Historia through an official ChatGPT export that you select yourself.</p>
 
-  <h2>What collection includes</h2>
-  <p>When you choose <strong>Collect this conversation</strong>, or enable automatic collection, the extension reads the conversation currently rendered in the permitted ChatGPT tab. The local observation can include:</p>
+  <h2>Browser companion data</h2>
+  <p>The extension may store:</p>
   <ul>
-    <li>visible user and assistant message text;</li>
-    <li>visible code blocks and basic formatting;</li>
-    <li>visible image or file references and available display metadata;</li>
-    <li>message roles, ordering, parent relationships, and the active conversation path;</li>
-    <li>the current ChatGPT page origin, path, and title;</li>
-    <li>the private local source label configured for this browser profile.</li>
+    <li>normalized <code>https://chatgpt.com/c/&lt;id&gt;</code> or <code>/share/&lt;id&gt;</code> links;</li>
+    <li>the active tab title when a bookmark is explicitly saved;</li>
+    <li>bookmark notes and tags entered by you;</li>
+    <li>prompt or context templates entered by you;</li>
+    <li>record timestamps and deletion tombstones used for deterministic sync.</li>
   </ul>
-  <p>URL query strings and fragments are removed before archival.</p>
+  <p>Query strings and fragments are removed from saved ChatGPT links. The extension does not run a content script on ChatGPT pages.</p>
 
-  <h2>Where data goes</h2>
-  <p>The extension transmits the bounded observation through browser native messaging to <code>ai.greenways.historia_collect</code>, a local executable registered for the Historia Collect extension identity. The host validates the observation and writes it into your local Git-native Historia vault. A local SQLite index may be rebuilt from that vault for search and context retrieval.</p>
-  <p>Historia configures no remote Git repository by default. Syncing or publishing a vault is a separate user-controlled Git operation.</p>
-
-  <h2>What Historia Collect does not read</h2>
+  <h2>What the extension does not read</h2>
   <ul>
-    <li>browser cookies;</li>
-    <li>ChatGPT access tokens or authentication headers;</li>
-    <li>passwords;</li>
-    <li>browser local-storage or session-storage credentials;</li>
-    <li>other tabs or websites outside the declared ChatGPT origins;</li>
-    <li>unrendered account history through undocumented provider APIs.</li>
+    <li>conversation message text or generated answers;</li>
+    <li>browser cookies, ChatGPT access tokens, authorization headers, passwords, or browser storage credentials;</li>
+    <li>private or undocumented ChatGPT APIs;</li>
+    <li>other page DOM content, attachments, or hidden account history;</li>
+    <li>other websites or background browsing history.</li>
   </ul>
 
-  <h2>What Historia Collect does not operate</h2>
-  <p>The extension contains no analytics, advertising, telemetry, cloud upload, remote model call, or third-party tracking SDK. The extension's network host permissions are limited to ChatGPT pages so its content script can observe the rendered conversation. Archive writes use the local native-messaging connection.</p>
+  <h2>Official history import</h2>
+  <p>For full conversation history, request the official ChatGPT data export and choose the resulting ZIP, extracted directory, or <code>conversations.json</code> in the local Historia application. Import is an explicit local operation. The authoritative archive is a Git vault on your computer, with a rebuildable SQLite projection for search and bounded context retrieval.</p>
 
-  <h2>Manual and automatic collection</h2>
-  <p>Manual collection is the default. Automatic collection is disabled until you enable it in settings. When enabled, it is debounced after rendered messages change. Exact duplicate observations remain idempotent.</p>
+  <h2>Local native host</h2>
+  <p>The extension may use browser native messaging to ask <code>ai.greenways.historia_collect</code> for local status and to open the local Historia application. It does not send page content through that connection. Historia configures no remote Git repository by default and operates no collection cloud or analytics service.</p>
+
+  <h2>Browser metadata sync</h2>
+  <p>Browser sync is disabled by default. When enabled, only the bounded companion state—bookmarks, prompt templates, tags, notes, timestamps, and deletion tombstones—is written to the browser's sync storage. Conversation bodies, ChatGPT export files, Historia Git objects, local search indexes, credentials, and private keys are excluded.</p>
+  <p>A portable JSON sync bundle can be downloaded and merged manually. Conflict resolution is deterministic: the record with the latest canonical update timestamp wins, and deletions are retained as tombstones.</p>
+
+  <h2>Prompt handoff</h2>
+  <p>The companion can copy a saved prompt and open ChatGPT. It never inserts text into the page or sends a prompt automatically. You remain responsible for reviewing and submitting copied material.</p>
 
   <h2>Retention and deletion</h2>
-  <p>Git history is intentionally durable. Removing a conversation from the current view does not erase earlier reachable Git objects. Historia distinguishes:</p>
-  <ul>
-    <li><strong>hide</strong>: exclude content from ordinary retrieval;</li>
-    <li><strong>redact</strong>: create a safer derived view while retaining the source record;</li>
-    <li><strong>purge</strong>: rewrite affected refs, expire reflogs, run garbage collection, and repeat the operation for every remote or clone.</li>
-  </ul>
-  <p>Uninstalling the browser bridge removes its native-host registration. It does not delete the vault or indexed conversations.</p>
+  <p>Removing a bookmark or prompt creates a sync tombstone so the deletion propagates to opted-in browser profiles. Disabling sync stops future browser-sync writes. Uninstalling the extension does not delete the separate local Historia vault.</p>
+  <p>Git history is intentionally durable. Historia distinguishes hiding content, creating a redacted derived view, and a deliberate purge that rewrites relevant refs and must also be repeated for every remote or clone.</p>
 
-  <h2>Firefox data categories</h2>
-  <p>Firefox classifies the local native-messaging transfer under <code>browsingActivity</code>, <code>personalCommunications</code>, and <code>websiteContent</code>. These categories describe the current ChatGPT page identity, rendered chat messages, and visible page content transferred to the local Historia host. They do not indicate remote collection by Greenways.</p>
+  <h2>Firefox data category</h2>
+  <p>Firefox classifies the explicit active-tab URL/title lookup under <code>browsingActivity</code>. The extension does not request <code>personalCommunications</code> or <code>websiteContent</code> collection because it does not read conversation messages or page content.</p>
 
-  <p><a href="options.html">Return to collection settings</a></p>
+  <p><a href="companion.html">Open the companion</a> · <a href="options.html">Open settings</a></p>
 </body>
 </html>

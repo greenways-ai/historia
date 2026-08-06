@@ -1,8 +1,9 @@
-# Installing Historia Collect
+# Installing Historia for ChatGPT
 
-Historia Collect connects the browser extension to the local Git-native Historia
-vault through a native-messaging host. The `historia-collect` installer registers
-that host at user scope and reports the exact extension directory to load.
+The `historia-collect` installer materializes the checksum-verified Historia for
+ChatGPT extension and registers the local native-messaging host at user scope.
+The browser companion manages explicit chat bookmarks and prompts; full history
+is imported from official ChatGPT exports in the local Historia application.
 
 ## Install for one browser
 
@@ -20,11 +21,10 @@ edge
 firefox
 ```
 
-Firefox 140 or newer is required. Historia uses Firefox's built-in extension
-consent UI for the rendered page identity, chat messages, and visible website
-content transferred to the local native host.
+Firefox 140 or newer is required. The extension declares only the
+`browsingActivity` data category for explicit active-tab URL/title access.
 
-Configure several browsers in one operation by repeating the option:
+Configure several browsers in one operation:
 
 ```bash
 historia-collect install \
@@ -38,50 +38,42 @@ The command returns JSON containing:
 - the executable or generated launcher used by the manifest;
 - the stable extension identity allowed to call the host;
 - the unpacked `extension/` directory;
-- the browser page where developer-mode extensions are loaded;
+- the browser page where developer-mode extensions are loaded; and
 - post-install integrity checks.
 
 ## Stable extension identities
 
-Historia Collect carries a public extension key in `extension/manifest.json` so
-Chromium-family browsers derive the same extension ID on every machine:
+Chromium-family extension ID:
 
 ```text
 idfjphfgkpmmgggnbomlalheckgdcefj
 ```
 
-Firefox uses the declared extension identity:
+Firefox extension ID:
 
 ```text
 historia-collect@greenways.ai
 ```
 
-The installer writes exactly one allowed origin or extension identity into each
-native-host manifest. A different extension cannot invoke the host through that
-registration.
+The native-host manifest allows exactly that identity. An unrelated extension
+cannot invoke the host through the registration.
 
 ## Load the unpacked extension
 
-After installation, open the extension page reported by the command:
+Open the extension page reported by the installer:
 
 - Chrome and Chromium: `chrome://extensions`
 - Brave: `brave://extensions`
 - Microsoft Edge: `edge://extensions`
-- Firefox development loading: `about:debugging#/runtime/this-firefox`
+- Firefox: `about:debugging#/runtime/this-firefox`
 
-Enable developer mode where required, choose **Load unpacked**, and select the
-reported extension directory. Firefox uses **Load Temporary Add-on** while the
-extension remains unpacked.
+Enable developer mode where required and load the reported extension directory.
+Firefox uses **Load Temporary Add-on** while the extension remains unpacked.
 
-Firefox presents the required data-collection categories when the extension is
-installed. In Historia Collect, this transfer goes to
-`ai.greenways.historia_collect` on the same computer. Review
-[Historia Collect privacy and data handling](collect-privacy.md) before enabling
-automatic collection.
-
-Open the Historia Collect popup and use **Check connection**. A successful ping
-confirms that the extension identity, native manifest, executable, and local
-vault boundary agree.
+Open the extension action. A supported ChatGPT conversation shows its normalized
+URL and title and can be saved after an explicit click. Select **Open companion**
+to manage bookmarks, prompts, official-export import, archive search, context,
+ledger, and metadata sync.
 
 ## Diagnose an installation
 
@@ -95,10 +87,8 @@ The diagnostic checks:
 - its host name is `ai.greenways.historia_collect`;
 - its extension allowlist matches Historia's stable identity;
 - the referenced host executable exists and is executable;
-- the Windows user registry entry exists when running on Windows;
-- the unpacked extension directory is present.
-
-The command exits non-zero when any requested browser registration is invalid.
+- the Windows user registry entry exists when applicable; and
+- the unpacked extension directory matches the embedded checksum manifest.
 
 ## Host executable resolution
 
@@ -108,26 +98,10 @@ The installer chooses the host in this order:
 2. `HISTORIA_COLLECT_HOST`;
 3. a compiled `historia-collect-host` beside the running executable;
 4. `dist/historia-collect-host` in the package;
-5. on macOS and Linux, an owner-only launcher that invokes the package's native
-   entry with the absolute Bun runtime path.
+5. on macOS and Linux, an owner-only launcher using the absolute Bun runtime.
 
 Windows requires a compiled `historia-collect-host.exe` or an explicit
-`--host-path`. The installer writes the browser manifest into Historia's local
-configuration directory and registers it under the current user's browser
-native-messaging registry key.
-
-## Platform registration locations
-
-At user scope the installer uses the standard native-messaging locations:
-
-- macOS: each browser's `NativeMessagingHosts` directory beneath
-  `~/Library/Application Support`;
-- Linux: the browser's directory beneath `~/.config`, with Firefox under
-  `~/.mozilla/native-messaging-hosts`;
-- Windows: a manifest beneath `%LOCALAPPDATA%\Historia` and an `HKCU` browser
-  registry entry.
-
-No administrator privileges are required for these registrations.
+`--host-path`.
 
 ## Remove registrations
 
@@ -137,11 +111,11 @@ historia-collect uninstall \
   --browser firefox
 ```
 
-Uninstalling removes the requested manifests and Windows registry entries. It
+Uninstalling removes requested native manifests and Windows registry entries. It
 does not delete the Historia vault, SQLite projection, imported conversations,
-or extension settings.
+or extension metadata.
 
-## Advanced and portable installations
+## Advanced installation
 
 Use an explicit compiled host:
 
@@ -151,8 +125,7 @@ historia-collect install \
   --host-path /opt/historia/bin/historia-collect-host
 ```
 
-Use a portable manifest root without touching a browser's normal registration
-location:
+Use a portable manifest root:
 
 ```bash
 historia-collect install \
@@ -160,8 +133,7 @@ historia-collect install \
   --manifest-root ./portable-native-hosts
 ```
 
-The lower-level manifest generator remains available when another packaging
-system owns placement:
+Generate a manifest without installing it:
 
 ```bash
 historia collect native-manifest \

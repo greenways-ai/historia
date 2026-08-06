@@ -6,74 +6,67 @@ const manifest = await Bun.file("extension/manifest.json").json();
 const popup = await readFile("extension/src/popup.html", "utf8");
 const options = await readFile("extension/src/options.html", "utf8");
 const privacy = await readFile("extension/src/privacy.html", "utf8");
+const background = await readFile("extension/src/background.js", "utf8");
 
-const CHATGPT_ORIGINS = [
-  "https://chatgpt.com/*",
-  "https://www.chatgpt.com/*",
-  "https://chat.openai.com/*"
-];
-
-const FIREFOX_DATA_CATEGORIES = [
-  "browsingActivity",
-  "personalCommunications",
-  "websiteContent"
-];
-
-describe("Historia Collect extension privacy policy", () => {
+describe("Historia for ChatGPT extension privacy policy", () => {
   test("preserves one cross-browser Manifest V3 background entry", () => {
     expect(manifest.manifest_version).toBe(3);
     expect(manifest.background).toEqual({
       scripts: ["src/background.js"],
       service_worker: "src/background.js",
-      type: "module"
+      type: "module",
     });
     expect(chromeExtensionIdFromKey(manifest.key)).toBe(CHROMIUM_EXTENSION_ID);
     expect(manifest.browser_specific_settings.gecko.id).toBe(FIREFOX_EXTENSION_ID);
   });
 
-  test("limits browser access to ChatGPT and local extension capabilities", () => {
-    expect(manifest.host_permissions).toEqual(CHATGPT_ORIGINS);
-    expect(manifest.content_scripts).toHaveLength(1);
-    expect(manifest.content_scripts[0].matches).toEqual(CHATGPT_ORIGINS);
+  test("has no page extraction surface or ChatGPT host access", () => {
+    expect(manifest.host_permissions).toBeUndefined();
+    expect(manifest.content_scripts).toBeUndefined();
     expect([...manifest.permissions].sort()).toEqual(["nativeMessaging", "storage", "tabs"]);
-    for (const disallowed of ["webRequest", "webRequestBlocking", "cookies", "history", "downloads", "proxy", "management", "debugger", "geolocation", "unlimitedStorage"]) {
+    for (const disallowed of [
+      "activeTab", "webRequest", "webRequestBlocking", "cookies", "history", "downloads",
+      "proxy", "management", "debugger", "geolocation", "unlimitedStorage", "scripting",
+    ]) {
       expect(manifest.permissions).not.toContain(disallowed);
     }
+    expect(background).not.toContain("tabs.sendMessage");
+    expect(background).not.toContain("captureObservation");
   });
 
-  test("uses Firefox built-in consent for the exact transmitted data categories", () => {
+  test("uses Firefox consent only for explicit active-tab metadata", () => {
     const gecko = manifest.browser_specific_settings.gecko;
     expect(Number.parseInt(gecko.strict_min_version, 10)).toBeGreaterThanOrEqual(140);
-    expect(gecko.data_collection_permissions).toEqual({ required: FIREFOX_DATA_CATEGORIES });
-    expect(new Set(gecko.data_collection_permissions.required).size).toBe(FIREFOX_DATA_CATEGORIES.length);
+    expect(gecko.data_collection_permissions).toEqual({ required: ["browsingActivity"] });
   });
 
-  test("makes local transmission and automatic collection visible before use", () => {
-    for (const page of [popup, options]) {
-      expect(page).toContain("local");
-      expect(page).toContain("privacy.html");
+  test("makes metadata-only storage, official export import, and sync opt-in visible", () => {
+    for (const page of [popup, options, privacy]) {
+      expect(page.toLowerCase()).toContain("metadata");
+      expect(page.toLowerCase()).toContain("chatgpt");
     }
-    expect(popup).toContain("Nothing is sent to Greenways or another remote service");
-    expect(options).toContain("Automatic");
-    expect(options).toContain("Disabled by default");
+    expect(popup).toContain("No message content is read");
+    expect(options).toContain("disabled by default");
+    expect(options).toContain("official ChatGPT data export");
+    expect(privacy).toContain("does not scrape ChatGPT conversations");
+    expect(privacy).toContain("does not run a content script");
   });
 
-  test("documents collected data, excluded credentials, retention, and local-only transfer", () => {
+  test("documents excluded credentials, local vault, browser sync, and manual prompt handoff", () => {
     for (const text of [
-      "visible user and assistant message text",
-      "current ChatGPT page origin, path, and title",
-      "native messaging",
-      "local Git-native Historia vault",
       "browser cookies",
-      "access tokens",
-      "analytics",
-      "automatic collection is disabled",
-      "purge"
+      "ChatGPT access tokens",
+      "undocumented ChatGPT APIs",
+      "local Historia vault",
+      "browser sync is disabled by default",
+      "conversation bodies",
+      "never inserts text",
+      "Git history is intentionally durable",
     ]) {
       expect(privacy.toLowerCase()).toContain(text.toLowerCase());
     }
     expect(privacy).toContain("browsingActivity");
-    expect(privacy).toContain("personalCommunications");
-    expect(privacy).toContain("websiteContent");
+    expect(privacy).not.toContain("personalCommunications");
+    expect(privacy).not.toContain("websiteContent");
   });
 });

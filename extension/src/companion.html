@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Historia for ChatGPT — local history, prompt handoff, bookmarks, and explicit metadata sync.">
+  <title>Historia for ChatGPT</title>
+  <link rel="stylesheet" href="companion.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#home" aria-label="Historia for ChatGPT home">
+        <span class="mark" aria-hidden="true">H</span>
+        <span><strong>Historia</strong><small>CHATGPT COMPANION</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="status-pill" data-native-status>Checking local archive…</span>
+        <button class="button button--primary" type="button" data-open="chatgpt">Open ChatGPT</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" id="home">
+        <div>
+          <p class="eyebrow">LOCAL MEMORY · EXPLICIT HANDOFF</p>
+          <h1>Keep the conversations.<br><em>Control the context.</em></h1>
+          <p class="hero-copy">Bookmark the chats you choose, prepare reusable prompts, import official ChatGPT exports into Historia, and carry only the context you intend back to the web app.</p>
+        </div>
+        <dl class="summary">
+          <div><dt>Bookmarks</dt><dd data-bookmark-count>0</dd></div>
+          <div><dt>Prompts</dt><dd data-prompt-count>0</dd></div>
+          <div><dt>Metadata sync</dt><dd data-sync-summary>Off</dd></div>
+        </dl>
+      </section>
+
+      <div class="grid">
+        <section class="panel current-panel" aria-labelledby="current-title">
+          <header class="panel-head">
+            <div><p>CURRENT TAB</p><h2 id="current-title">Chat bookmark</h2></div>
+            <span class="badge">URL + TITLE ONLY</span>
+          </header>
+          <div data-current-chat class="current-chat">
+            <strong>No supported ChatGPT conversation is active.</strong>
+            <p>Open a conversation or shared link, then refresh this card.</p>
+          </div>
+          <div class="actions">
+            <button class="button button--primary" type="button" data-save-current disabled>Save bookmark</button>
+            <button class="button" type="button" data-refresh-current>Refresh current tab</button>
+          </div>
+          <p class="fineprint">Historia reads the active tab URL and title only after you press Save. It does not read rendered messages, cookies, browser storage, or private ChatGPT endpoints.</p>
+        </section>
+
+        <section class="panel history-panel" aria-labelledby="history-title">
+          <header class="panel-head">
+            <div><p>LOCAL HISTORIA VAULT</p><h2 id="history-title">History & context</h2></div>
+            <span class="badge">GIT-NATIVE</span>
+          </header>
+          <p>Request an official export from ChatGPT under <strong>Settings → Data controls → Export</strong>, then import the ZIP into the local Historia app.</p>
+          <div class="action-grid">
+            <button class="action-card" type="button" data-open="import"><strong>Import history</strong><span>Official ZIP or conversation JSON</span></button>
+            <button class="action-card" type="button" data-open="archive"><strong>Search archive</strong><span>Messages, branches, revisions and provenance</span></button>
+            <button class="action-card" type="button" data-open="context"><strong>Build context</strong><span>Bounded packages for your next task</span></button>
+            <button class="action-card" type="button" data-open="ledger"><strong>Inspect ledger</strong><span>Import commits, source refs and receipts</span></button>
+          </div>
+          <p class="fineprint">The extension never attempts to recreate or modify ChatGPT's own sidebar. The Historia archive is a separate local record.</p>
+        </section>
+
+        <section class="panel bookmarks-panel" aria-labelledby="bookmarks-title">
+          <header class="panel-head">
+            <div><p>CURATED NAVIGATION</p><h2 id="bookmarks-title">Saved chats</h2></div>
+            <input class="search" type="search" placeholder="Filter bookmarks" aria-label="Filter bookmarks" data-bookmark-filter>
+          </header>
+          <div class="record-list" data-bookmarks></div>
+        </section>
+
+        <section class="panel prompts-panel" aria-labelledby="prompts-title">
+          <header class="panel-head">
+            <div><p>PROMPT HANDOFF</p><h2 id="prompts-title">Reusable prompts</h2></div>
+            <span class="badge">COPY · REVIEW · SEND</span>
+          </header>
+          <form class="prompt-form" data-prompt-form>
+            <label>Title<input name="title" maxlength="160" required placeholder="Architecture review"></label>
+            <label>Prompt or context<textarea name="text" maxlength="65536" rows="8" required placeholder="Review the following design…"></textarea></label>
+            <label>Tags<input name="tags" maxlength="320" placeholder="work, hara, review"></label>
+            <div class="actions"><button class="button button--primary" type="submit">Save prompt</button><button class="button" type="button" data-clear-prompt>Clear</button></div>
+          </form>
+          <div class="record-list prompt-list" data-prompts></div>
+        </section>
+
+        <section class="panel sync-panel" aria-labelledby="sync-title">
+          <header class="panel-head">
+            <div><p>PORTABLE METADATA</p><h2 id="sync-title">Sync & backup</h2></div>
+            <span class="badge">OPT-IN</span>
+          </header>
+          <label class="toggle-row">
+            <input type="checkbox" data-sync-toggle>
+            <span><strong>Sync bookmarks and prompt templates through the browser profile</strong><small>Conversation bodies and Historia vault objects are never placed in browser sync.</small></span>
+          </label>
+          <div class="actions">
+            <button class="button" type="button" data-export-sync>Download sync bundle</button>
+            <label class="button file-button">Import sync bundle<input type="file" accept="application/json,.json" data-import-sync></label>
+          </div>
+          <p class="fineprint">Portable bundles use <code>historia.chatgpt.sync/1</code>, retain tombstones, and merge by record update time. Vault publication or Git remote sync remains a separate explicit Historia operation.</p>
+        </section>
+
+        <section class="panel policy-panel" aria-labelledby="policy-title">
+          <header class="panel-head"><div><p>BOUNDARY</p><h2 id="policy-title">What this app will not do</h2></div></header>
+          <ul class="policy-list">
+            <li>It does not scrape or automatically extract ChatGPT conversations.</li>
+            <li>It does not read account cookies, session tokens, local storage, or undocumented APIs.</li>
+            <li>It does not insert or send prompts without a deliberate copy-and-paste action.</li>
+            <li>It does not claim that importing an export recreates ChatGPT's native history.</li>
+          </ul>
+          <p><a href="privacy.html">Read the complete local data and sync disclosure</a></p>
+        </section>
+      </div>
+    </main>
+
+    <footer><span>HISTORIA / CHATGPT COMPANION</span><span>Local by default · sync by consent</span></footer>
+    <div class="toast" role="status" aria-live="polite" hidden data-toast></div>
+  </div>
+  <script type="module" src="companion.js"></script>
+</body>
+</html>

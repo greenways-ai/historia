@@ -14,15 +14,16 @@ provider, or remote service.
   exact commit provenance.
 - **Historia Chat Archive** imports official ChatGPT exports without flattening
   regenerated branches or overwriting edited message revisions.
-- **Historia Collect** captures explicitly selected rendered ChatGPT
-  conversations through a restricted local browser bridge.
+- **Historia for ChatGPT** bookmarks explicit conversation links, manages
+  reusable prompt/context handoffs, and opens the local archive without scraping
+  ChatGPT messages, cookies, or private provider endpoints.
 - **Context bundles** give Codex, Kimi, and other local agents bounded,
   token-aware access to archived conversations without modifying their private
   session databases.
 
 Git remains the source of truth. SQLite search indexes, context bundles,
-summaries, and application views are derived projections that can be deleted and
-rebuilt.
+summaries, browser bookmarks, and application views are derived projections
+that can be deleted and rebuilt or synchronized separately.
 
 ## Installation
 
@@ -126,25 +127,35 @@ historia context build \
   --include-branches
 ```
 
-Start the loopback-only Collect application:
+Start the loopback-only Historia application:
 
 ```bash
 historia collect serve
 ```
 
-Install the browser-to-native bridge:
+Install the browser-to-native bridge and checksum-verified unpacked companion:
 
 ```bash
 historia-collect install --browser chrome
 historia-collect doctor --browser chrome
 ```
 
-The installer supports Chrome, Chromium, Brave, Edge, and Firefox. It embeds the
-complete unpacked extension, materializes it with checksum verification, and
-registers the native host at user scope. See:
+The installer supports Chrome, Chromium, Brave, Edge, and Firefox. The companion
+can save an active ChatGPT conversation URL and title after an explicit click,
+manage reusable prompts, and open the local import, archive, context, ledger, and
+settings views. It has no ChatGPT host permissions or content script and never
+extracts rendered messages.
 
+Full conversation content enters Historia through the official export import
+shown above. Browser-profile sync is optional and limited to bookmarks, prompt
+templates, notes, tags, timestamps, and deletion tombstones; it excludes
+conversation bodies and vault objects.
+
+See:
+
+- [`docs/chatgpt-companion.md`](docs/chatgpt-companion.md)
 - [`docs/collect-install.md`](docs/collect-install.md)
-- [`docs/browser-collect.md`](docs/browser-collect.md)
+- [`docs/collect-privacy.md`](docs/collect-privacy.md)
 - [`docs/collect-app.md`](docs/collect-app.md)
 - [`docs/chat-retrieval.md`](docs/chat-retrieval.md)
 
@@ -217,19 +228,19 @@ A conversation vault is a bare Git repository with source refs such as:
 
 ```text
 refs/historia/sources/openai/<source-key-digest>
-refs/historia/sources/openai-browser/<source-key-digest>
 ```
 
-One Git commit represents one atomic collection transaction—not one message.
-Trees keep normalized message revisions, raw provider records, conversation
-graphs, assets, source metadata, and import receipts reachable.
+One Git commit represents one atomic import transaction—not one message. Trees
+keep normalized message revisions, raw provider records, conversation graphs,
+assets, source metadata, and import receipts reachable.
 
-Browser captures are classified as `browser-observed`. They prove what Historia
-recorded from a rendered page at a particular archive transaction; they do not
-claim provider authorship or account completeness.
+The browser companion's bookmarks and prompt templates are a separate bounded
+metadata projection. They do not claim provider authorship, account
+completeness, or correspondence with the full archive. Browser sync is disabled
+by default and never includes conversation bodies or Git objects.
 
 The default vault is local, has no configured remote, and emits no core
-telemetry.
+telemetry. Adding a Git remote or copying a vault is a separate explicit action.
 
 ## Development
 
