@@ -73,6 +73,7 @@ jobs:
           git rm .github/workflows/migrate-hara-analyzer-hta.yml
           git add analyzers/hara/Cargo.toml \
                   analyzers/hara/README.md \
+                  analyzers/hara/analyzer.hal \
                   analyzers/hara/build.rs \
                   analyzers/hara/src/engine.rs
           git commit -m "Use the HTA1 whole-Wasm boundary from Hara #355"
