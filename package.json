@@ -51,7 +51,7 @@
     "conformance:hara": "bun src/cli.js analyzer check analyzers/hara/target/release/historia-hara-analyzer",
     "conformance:typescript": "bun src/cli.js analyzer check bun analyzers/typescript/src/analyzer.js --fixture spec/conformance/typescript.json",
     "conformance:python": "bun src/cli.js analyzer check python3 analyzers/python/src/analyzer.py --fixture spec/conformance/python.json",
-    "analyzer:parity": "bun benchmarks/clojure-analyzers.js --parity-only",
+    "analyzer:shape": "bun benchmarks/clojure-analyzers.js --shape-only --files 0 --definitions 0",
     "benchmark:clojure-analyzers": "bun benchmarks/clojure-analyzers.js",
     "benchmark:clojure-analyzer-matrix": "bun benchmarks/clojure-analyzer-matrix.js",
     "benchmark": "bun benchmarks/index.js",
