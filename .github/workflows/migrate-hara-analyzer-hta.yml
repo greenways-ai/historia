@@ -62,9 +62,48 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Verify protocol and exact output identity
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           bun run conformance:hara
-          bun run analyzer:parity
+          set +e
+          bun benchmarks/clojure-analyzers.js \
+            --parity-only \
+            --json target/hta-parity.json
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            python3 <<'PY' > /tmp/pr55-hta-parity.md
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("target/hta-parity.json").read_text())
+          mismatch = report["exact_parity"]["mismatches"][0]
+          difference = mismatch["difference"]
+          babashka = mismatch["babashka"]
+          hara = mismatch["hara"]
+          symbol_index = 1
+          print("<!-- historia-pr55-hta-parity-failure -->")
+          print("## HTA1 exact-output mismatch")
+          print()
+          print(f"Fixture: `{mismatch['path']}`")
+          print(f"Path: `{difference['path']}`")
+          print(f"Babashka value: `{json.dumps(difference.get('babashka'), ensure_ascii=False)}`")
+          print(f"Hara value: `{json.dumps(difference.get('hara'), ensure_ascii=False)}`")
+          print()
+          print("### Babashka symbol")
+          print("```json")
+          print(json.dumps(babashka["result"]["symbols"][symbol_index], ensure_ascii=False, indent=2))
+          print("```")
+          print()
+          print("### Hara symbol")
+          print("```json")
+          print(json.dumps(hara["result"]["symbols"][symbol_index], ensure_ascii=False, indent=2))
+          print("```")
+          PY
+            cat /tmp/pr55-hta-parity.md
+            gh pr comment 55 --repo greenways-ai/historia --body-file /tmp/pr55-hta-parity.md
+            exit "$status"
+          fi
 
       - name: Commit the verified migration
         run: |
