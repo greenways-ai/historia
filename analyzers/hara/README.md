@@ -35,9 +35,11 @@ handle-valued rows (`node-at`) from integer root and child-ID sequences
 (`int-at`). Those schemas let whole-Wasm prove each call and branch
 representation without unchecked casts or changes to the analyzer protocol.
 
-Structural keyword tokens follow rewrite-clj's observed generic-token behavior
-and normalize to `[:symbol]`. This preserves the Babashka analyzer's complete
-shape, feature, depth, node-count, and structural-hash output.
+Structural keyword and string-literal tokens follow rewrite-clj's observed
+generic-token behavior and normalize to `[:symbol]`. This preserves the
+Babashka analyzer's complete shape, feature, depth, node-count, and
+structural-hash output while the reader tree still retains the original token
+kind for call filtering and protocol materialization.
 
 ## Build and run
 
