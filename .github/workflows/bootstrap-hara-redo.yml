@@ -17,9 +17,20 @@ jobs:
           ref: codex/hara-analyzer-benchmark
           fetch-depth: 0
 
+      - name: Wait for the verified payload marker
+        id: ready
+        run: |
+          if [ -f .bootstrap/ready ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Replace the Java analyzer with the .hal implementation
+        if: steps.ready.outputs.ready == 'true'
         run: |
           cat .bootstrap/part-* | base64 --decode > /tmp/historia-hara-upload.tgz
+          gzip -t /tmp/historia-hara-upload.tgz
           tar -xzf /tmp/historia-hara-upload.tgz -C .
           rm -rf .bootstrap .github/workflows/bootstrap-hara-redo.yml
           git config user.name "github-actions[bot]"
