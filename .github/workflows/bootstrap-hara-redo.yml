@@ -1,0 +1,29 @@
+name: Bootstrap HAL analyzer rewrite
+
+on:
+  push:
+    branches:
+      - codex/hara-analyzer-benchmark
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/hara-analyzer-benchmark
+          fetch-depth: 0
+
+      - name: Replace the Java analyzer with the .hal implementation
+        run: |
+          cat .bootstrap/part-* | base64 --decode > /tmp/historia-hara-upload.tgz
+          tar -xzf /tmp/historia-hara-upload.tgz -C .
+          rm -rf .bootstrap .github/workflows/bootstrap-hara-redo.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rewrite the Historia analyzer in HAL"
+          git push origin HEAD:codex/hara-analyzer-benchmark
