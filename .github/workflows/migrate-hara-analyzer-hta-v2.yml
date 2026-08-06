@@ -1,0 +1,130 @@
+name: Finalize PR55 HTA1 migration
+
+on:
+  push:
+    branches:
+      - codex/hara-analyzer-benchmark
+    paths:
+      - .github/scripts/migrate_hara_analyzer_to_hta.py
+      - .github/workflows/migrate-hara-analyzer-hta-v2.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: historia-pr55-hta-migration-v2
+  cancel-in-progress: true
+
+jobs:
+  migrate-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/hara-analyzer-benchmark
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          bb: 1.12.218
+
+      - name: Apply the HTA1 migration
+        run: python3 .github/scripts/migrate_hara_analyzer_to_hta.py
+
+      - name: Format, test and build the Hara analyzer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cargo fmt --manifest-path analyzers/hara/Cargo.toml
+          set +e
+          set -o pipefail
+          cargo test --manifest-path analyzers/hara/Cargo.toml 2>&1 | tee /tmp/hara-analyzer-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '<!-- historia-pr55-hta-migration-failure -->'
+              echo '## HTA1 migration compile failure'
+              echo
+              echo '```text'
+              tail -n 220 /tmp/hara-analyzer-test.log
+              echo '```'
+            } > /tmp/pr55-hta-failure.md
+            gh pr comment 55 --repo greenways-ai/historia --body-file /tmp/pr55-hta-failure.md
+            exit "$status"
+          fi
+          cargo build --release --manifest-path analyzers/hara/Cargo.toml
+
+      - name: Install Historia dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify protocol and exact output identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          bun run conformance:hara
+          set +e
+          bun benchmarks/clojure-analyzers.js \
+            --parity-only \
+            --json target/hta-parity.json
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            python3 <<'PY' > /tmp/pr55-hta-parity.md
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path("target/hta-parity.json").read_text())
+          mismatch = report["exact_parity"]["mismatches"][0]
+          difference = mismatch["difference"]
+          babashka = mismatch["babashka"]
+          hara = mismatch["hara"]
+          path = difference["path"]
+          symbol_index = 0
+          marker = "symbols.["
+          if marker in path:
+              symbol_index = int(path.split(marker, 1)[1].split("]", 1)[0])
+          print("<!-- historia-pr55-hta-parity-failure -->")
+          print("## HTA1 exact-output mismatch")
+          print()
+          print(f"Fixture: `{mismatch['path']}`")
+          print(f"Path: `{path}`")
+          print(f"Babashka value: `{json.dumps(difference.get('babashka'), ensure_ascii=False)}`")
+          print(f"Hara value: `{json.dumps(difference.get('hara'), ensure_ascii=False)}`")
+          if "symbols" in path:
+              print()
+              print("### Babashka symbol")
+              print("```json")
+              print(json.dumps(babashka["result"]["symbols"][symbol_index], ensure_ascii=False, indent=2))
+              print("```")
+              print()
+              print("### Hara symbol")
+              print("```json")
+              print(json.dumps(hara["result"]["symbols"][symbol_index], ensure_ascii=False, indent=2))
+              print("```")
+          PY
+            cat /tmp/pr55-hta-parity.md
+            gh pr comment 55 --repo greenways-ai/historia --body-file /tmp/pr55-hta-parity.md
+            exit "$status"
+          fi
+
+      - name: Commit the verified migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/scripts/migrate_hara_analyzer_to_hta.py
+          git rm .github/workflows/migrate-hara-analyzer-hta.yml
+          git rm .github/workflows/migrate-hara-analyzer-hta-v2.yml
+          git add analyzers/hara/Cargo.toml \
+                  analyzers/hara/README.md \
+                  analyzers/hara/analyzer.hal \
+                  analyzers/hara/build.rs \
+                  analyzers/hara/src/engine.rs
+          git commit -m "Use the HTA1 whole-Wasm boundary from Hara #355"
+          git push origin HEAD:codex/hara-analyzer-benchmark
