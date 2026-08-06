@@ -13,6 +13,8 @@ import { defaultHistoriaIndexPath, openChatIndex } from "./chat/index-storage.js
 import { indexHistoriaChats } from "./chat/indexer.js";
 import { inspectOpenAIExport } from "./chat/openai-export.js";
 import { listChatConversations, loadConversationSnapshot, searchChatIndex } from "./chat/search.js";
+import { indexMissingMessageTextGraphs, loadMessageTextGraph, textGraphCounts } from "./chat/text-graph-storage.js";
+import { indexMissingGraphTopics, topicIndexCounts, topicQueryPlan } from "./chat/topic-index.js";
 import historiaChatSkill from "../skills/historia-chat-agent/SKILL.md" with { type: "text" };
 
 const VERSION = "0.1.0";
@@ -35,10 +37,14 @@ Usage:
   historia collect serve [--host 127.0.0.1] [--port 4319] [--vault <path>] [--database <path>]
 
   historia chat index [--vault <path>] [--database <path>] [--rebuild]
-  historia chat search <query...> [--limit <n>] [--source-ref <ref>] [--role <role>] [--since <time>] [--until <time>] [--historical]
+  historia chat search <query...> [--limit <n>] [--source-ref <ref>] [--role <role>] [--since <time>] [--until <time>] [--historical] [--expand-topics]
   historia chat list [--limit <n>] [--source-ref <ref>]
   historia chat show <conversation-hid> [--source-ref <ref>] [--commit <oid>]
-  historia context build <query...> [--budget <tokens>] [--max-conversations <n>] [--radius <n>] [--include-branches] [--historical] [--format json|markdown] [--output <path>]
+  historia graph index [--vault <path>] [--database <path>] [--limit <n>] [--rebuild]
+  historia graph show <revision-oid|message-hid|graph-id> [--projection all|source|concepts|work] [--output <path>]
+  historia topic index [--vault <path>] [--database <path>] [--limit <n>] [--rebuild]
+  historia topic search <query...> [--topic-limit <n>] [--topic-seed-limit <n>] [--topic-min-support <n>]
+  historia context build <query...> [--budget <tokens>] [--max-conversations <n>] [--radius <n>] [--include-branches] [--historical] [--expand-topics] [--format json|markdown] [--output <path>]
   historia agent install codex|kimi [--scope user|project]
 
   historia --version
@@ -149,6 +155,7 @@ const { positionals, values } = parseArgs({
     "max-conversations": { type: "string" },
     format: { type: "string" },
     output: { type: "string" },
+    projection: { type: "string" },
     browser: { type: "string" },
     "extension-id": { type: "string" },
     "host-path": { type: "string" },
@@ -159,6 +166,10 @@ const { positionals, values } = parseArgs({
     rebuild: { type: "boolean" },
     historical: { type: "boolean" },
     "include-branches": { type: "boolean" },
+    "expand-topics": { type: "boolean" },
+    "topic-limit": { type: "string" },
+    "topic-seed-limit": { type: "string" },
+    "topic-min-support": { type: "string" },
     "no-raw": { type: "boolean" },
     "no-index": { type: "boolean" }
   }
@@ -257,6 +268,73 @@ async function main() {
     await emit(await indexHistoriaChats({ vaultPath, databasePath, rebuild: values.rebuild }));
     return;
   }
+  if (domain === "graph" && command === "index") {
+    const index = await indexHistoriaChats({ vaultPath, databasePath, rebuild: values.rebuild });
+    const db = await openChatIndex(databasePath);
+    try {
+      const textGraphs = indexMissingMessageTextGraphs(db, { limit: numberOption(values.limit, 100_000) });
+      const topics = indexMissingGraphTopics(db, { limit: numberOption(values.limit, 100_000) });
+      await emit({
+        index,
+        text_graphs: textGraphs,
+        topics,
+        counts: { ...textGraphCounts(db), ...topicIndexCounts(db) }
+      });
+    } finally {
+      db.close();
+    }
+    return;
+  }
+  if (domain === "graph" && command === "show") {
+    if (!inputPath) throw new Error("a text graph, message, or revision identifier is required");
+    if (!values["no-index"]) await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    try {
+      indexMissingMessageTextGraphs(db);
+      const graph = loadMessageTextGraph(db, inputPath, { projection: values.projection ?? "all" });
+      if (!graph) throw new Error(`text graph not found: ${inputPath}`);
+      await emit(graph, { output: values.output });
+    } finally {
+      db.close();
+    }
+    return;
+  }
+  if (domain === "topic" && command === "index") {
+    const index = await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    try {
+      const textGraphs = indexMissingMessageTextGraphs(db, { limit: numberOption(values.limit, 100_000) });
+      const topics = indexMissingGraphTopics(db, {
+        limit: numberOption(values.limit, 100_000),
+        rebuild: values.rebuild
+      });
+      await emit({ index, text_graphs: textGraphs, topics, counts: topicIndexCounts(db) });
+    } finally {
+      db.close();
+    }
+    return;
+  }
+  if (domain === "topic" && command === "search") {
+    const query = positionals.slice(2).join(" ").trim();
+    if (!query) throw new Error("a topic search query is required");
+    if (!values["no-index"]) await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    try {
+      if (!values["no-index"]) {
+        indexMissingMessageTextGraphs(db);
+        indexMissingGraphTopics(db);
+      }
+      await emit(topicQueryPlan(db, query, {
+        seedLimit: numberOption(values["topic-seed-limit"], 6),
+        relatedLimit: numberOption(values["topic-limit"], 12),
+        minSupport: numberOption(values["topic-min-support"], 1),
+        messageLimit: numberOption(values.limit, 250)
+      }));
+    } finally {
+      db.close();
+    }
+    return;
+  }
 
   const updateIndex = async () => values["no-index"] ? null : indexHistoriaChats({ vaultPath, databasePath });
   if (domain === "chat" && command === "search") {
@@ -265,9 +343,14 @@ async function main() {
     const index = await updateIndex();
     const db = await openChatIndex(databasePath);
     try {
+      if (values["expand-topics"] && !values["no-index"]) {
+        indexMissingMessageTextGraphs(db);
+        indexMissingGraphTopics(db);
+      }
       await emit({
         query,
         historical: Boolean(values.historical),
+        expand_topics: Boolean(values["expand-topics"]),
         index,
         results: searchChatIndex(db, query, {
           limit: numberOption(values.limit, 20),
@@ -275,7 +358,11 @@ async function main() {
           role: values.role,
           since: values.since,
           until: values.until,
-          historical: values.historical
+          historical: values.historical,
+          expandTopics: values["expand-topics"],
+          topicLimit: numberOption(values["topic-limit"], 12),
+          topicSeedLimit: numberOption(values["topic-seed-limit"], 6),
+          topicMinSupport: numberOption(values["topic-min-support"], 1)
         })
       });
     } finally {
@@ -321,6 +408,10 @@ async function main() {
     await updateIndex();
     const db = await openChatIndex(databasePath);
     try {
+      if (values["expand-topics"] && !values["no-index"]) {
+        indexMissingMessageTextGraphs(db);
+        indexMissingGraphTopics(db);
+      }
       const bundle = buildChatContext(db, query, {
         budget: numberOption(values.budget, 12_000),
         maxConversations: numberOption(values["max-conversations"], 8),
@@ -330,7 +421,11 @@ async function main() {
         role: values.role,
         since: values.since,
         until: values.until,
-        historical: values.historical
+        historical: values.historical,
+        expandTopics: values["expand-topics"],
+        topicLimit: numberOption(values["topic-limit"], 12),
+        topicSeedLimit: numberOption(values["topic-seed-limit"], 6),
+        topicMinSupport: numberOption(values["topic-min-support"], 1)
       });
       await emit(bundle, { format: values.format ?? "markdown", output: values.output });
     } finally {

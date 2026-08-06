@@ -1,3 +1,5 @@
+import { topicQueryPlan } from "./topic-index.js";
+
 function ftsQuery(query) {
   const terms = String(query ?? "").normalize("NFKC").match(/[\p{L}\p{N}_./:@-]+/gu) ?? [];
   return terms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR ");
@@ -7,7 +9,6 @@ function parseJson(value, fallback) {
   try { return JSON.parse(value); }
   catch { return fallback; }
 }
-
 
 function timeBoundary(value, label) {
   if (value === null || value === undefined || value === "") return null;
@@ -48,26 +49,82 @@ function latestObservationForMessage(db, messageHid, sources = null) {
   return observations(db, "message_hid", messageHid).find((row) => !sources || sources.has(row.source_ref)) ?? null;
 }
 
+function loadRevisionRows(db, revisionOids) {
+  const result = new Map();
+  const values = [...new Set(revisionOids)].filter(Boolean);
+  for (let offset = 0; offset < values.length; offset += 400) {
+    const chunk = values.slice(offset, offset + 400);
+    const placeholders = chunk.map(() => "?").join(", ");
+    const rows = db.query(`
+      SELECT revision_oid, message_hid, role, model, created_at, updated_at,
+             content_text, token_estimate
+      FROM chat_message_revisions
+      WHERE revision_oid IN (${placeholders})
+    `).all(...chunk);
+    for (const row of rows) result.set(row.revision_oid, row);
+  }
+  return result;
+}
+
+function fallbackSnippet(content) {
+  const value = String(content ?? "").replace(/\s+/gu, " ").trim();
+  if (!value) return "";
+  return value.length <= 220 ? value : `${value.slice(0, 219)}…`;
+}
+
+function topicSummary(plan, candidate) {
+  if (!candidate) return null;
+  return {
+    rank: candidate.rank,
+    score: candidate.score,
+    direct_topics: candidate.direct_topics,
+    associated_topics: candidate.associated_topics,
+    facets: candidate.facets,
+    graph_node_ids: candidate.graph_node_ids,
+    support_node_ids: candidate.support_node_ids,
+    seed_topics: plan.seeds.map((topic) => ({
+      topic_id: topic.topic_id,
+      label: topic.label,
+      kind: topic.kind,
+      rank: topic.rank,
+      match_strength: topic.match_strength
+    })),
+    related_topics: plan.related.map((topic) => ({
+      topic_id: topic.topic_id,
+      label: topic.label,
+      kind: topic.kind,
+      seed_topic_id: topic.seed_topic_id,
+      association_score: topic.association_score,
+      support_count: topic.support_count
+    }))
+  };
+}
+
 export function searchChatIndex(db, query, {
   limit = 20,
   sourceRef = null,
   role = null,
   since = null,
   until = null,
-  historical = false
+  historical = false,
+  expandTopics = false,
+  topicLimit = 12,
+  topicSeedLimit = 6,
+  topicMinSupport = 1
 } = {}) {
   const match = ftsQuery(query);
-  if (!match) return [];
+  if (!match && !expandTopics) return [];
   const resultLimit = Math.max(1, Math.min(500, Number(limit) || 20));
   const candidateLimit = Math.min(5000, historical
-    ? Math.max(resultLimit * 6, 60)
-    : Math.max(resultLimit * 25, 250));
+    ? Math.max(resultLimit * 8, 80)
+    : Math.max(resultLimit * 30, 300));
   const sources = allowedSources(sourceRef);
   const roles = role ? new Set(Array.isArray(role) ? role : [role]) : null;
   const sinceValue = timeBoundary(since, "since");
   const untilValue = timeBoundary(until, "until");
   if (sinceValue !== null && untilValue !== null && sinceValue > untilValue) throw new Error("since must not be later than until");
-  const candidates = db.query(`
+
+  const lexicalCandidates = match ? db.query(`
     SELECT f.revision_oid, f.message_hid, f.conversation_hid, f.title, f.role,
            bm25(chat_message_search) AS score,
            snippet(chat_message_search, 5, '[', ']', ' … ', 18) AS snippet,
@@ -77,32 +134,93 @@ export function searchChatIndex(db, query, {
     WHERE chat_message_search MATCH ?
     ORDER BY score, f.revision_oid
     LIMIT ?
-  `).all(match, candidateLimit);
+  `).all(match, candidateLimit) : [];
+
+  const topicPlan = expandTopics ? topicQueryPlan(db, query, {
+    seedLimit: Math.max(1, Math.min(20, Number(topicSeedLimit) || 6)),
+    relatedLimit: Math.max(1, Math.min(100, Number(topicLimit) || 12)),
+    messageLimit: candidateLimit,
+    minSupport: Math.max(1, Number(topicMinSupport) || 1)
+  }) : { seeds: [], related: [], candidates: [] };
+
+  const merged = new Map();
+  for (const [index, candidate] of lexicalCandidates.entries()) {
+    const current = merged.get(candidate.revision_oid) ?? {
+      revision_oid: candidate.revision_oid,
+      message_hid: candidate.message_hid,
+      conversation_hid: candidate.conversation_hid,
+      fused_score: 0,
+      lexical: null,
+      topic: null
+    };
+    current.lexical = { ...candidate, rank: index + 1 };
+    current.fused_score += 1 / (60 + index + 1);
+    merged.set(candidate.revision_oid, current);
+  }
+  for (const candidate of topicPlan.candidates) {
+    const current = merged.get(candidate.revision_oid) ?? {
+      revision_oid: candidate.revision_oid,
+      message_hid: candidate.message_hid,
+      conversation_hid: candidate.conversation_hid,
+      fused_score: 0,
+      lexical: null,
+      topic: null
+    };
+    current.topic = candidate;
+    current.fused_score += 0.85 / (60 + candidate.rank) + candidate.score * 0.01;
+    merged.set(candidate.revision_oid, current);
+  }
+
+  const ordered = [...merged.values()].sort((left, right) => {
+    if (expandTopics) {
+      return right.fused_score - left.fused_score
+        || (left.lexical?.score ?? Infinity) - (right.lexical?.score ?? Infinity)
+        || (right.topic?.score ?? 0) - (left.topic?.score ?? 0)
+        || left.revision_oid.localeCompare(right.revision_oid);
+    }
+    return (left.lexical?.rank ?? Infinity) - (right.lexical?.rank ?? Infinity)
+      || left.revision_oid.localeCompare(right.revision_oid);
+  });
+  const revisions = loadRevisionRows(db, ordered.map((candidate) => candidate.revision_oid));
 
   const results = [];
-  for (const candidate of candidates) {
-    if (roles && !roles.has(candidate.role)) continue;
-    const created = candidate.created_at ? new Date(candidate.created_at).valueOf() : null;
+  for (const candidate of ordered) {
+    const revision = revisions.get(candidate.revision_oid);
+    if (!revision) continue;
+    if (roles && !roles.has(revision.role)) continue;
+    const created = revision.created_at ? new Date(revision.created_at).valueOf() : null;
     if (sinceValue !== null && created !== null && created < sinceValue) continue;
     if (untilValue !== null && created !== null && created > untilValue) continue;
     const observation = historical
       ? latestObservationForRevision(db, candidate.revision_oid, sources)
-      : latestObservationForMessage(db, candidate.message_hid, sources);
+      : latestObservationForMessage(db, revision.message_hid, sources);
     if (!observation || (!historical && observation.revision_oid !== candidate.revision_oid)) continue;
+    const topic = topicSummary(topicPlan, candidate.topic);
+    const lexical = candidate.lexical ? {
+      rank: candidate.lexical.rank,
+      bm25: candidate.lexical.score,
+      snippet: candidate.lexical.snippet
+    } : null;
     results.push({
       rank: results.length + 1,
-      score: candidate.score,
-      snippet: candidate.snippet,
+      score: expandTopics ? -candidate.fused_score : candidate.lexical?.score,
+      retrieval_score: expandTopics ? candidate.fused_score : null,
+      snippet: candidate.lexical?.snippet ?? fallbackSnippet(revision.content_text),
       revision_oid: candidate.revision_oid,
-      message_hid: candidate.message_hid,
-      conversation_hid: candidate.conversation_hid,
-      title: observation.title ?? candidate.title,
-      role: candidate.role,
-      model: candidate.model,
-      created_at: candidate.created_at,
-      updated_at: candidate.updated_at,
-      content: candidate.content_text,
-      token_estimate: candidate.token_estimate,
+      message_hid: revision.message_hid,
+      conversation_hid: observation.conversation_hid ?? candidate.conversation_hid,
+      title: observation.title ?? candidate.lexical?.title ?? "Untitled conversation",
+      role: revision.role,
+      model: revision.model,
+      created_at: revision.created_at,
+      updated_at: revision.updated_at,
+      content: revision.content_text,
+      token_estimate: revision.token_estimate,
+      retrieval: {
+        mode: expandTopics ? "lexical+topics" : "lexical",
+        lexical,
+        topics: topic
+      },
       provenance: {
         source_ref: observation.source_ref,
         commit_oid: observation.commit_oid,

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/text-projection-v1.schema.json",
+  "title": "Historia Text Projection v1",
+  "type": "object",
+  "required": ["$schema", "projection", "graph_id", "analyzer", "document", "anchors", "nodes", "edges", "origins"],
+  "properties": {
+    "$schema": { "const": "historia.text.projection/v1" },
+    "projection": { "enum": ["source", "concepts", "work"] },
+    "graph_id": { "$ref": "text-graph-v1.schema.json#/$defs/graphId" },
+    "analyzer": { "$ref": "text-graph-v1.schema.json#/$defs/analyzer" },
+    "document": { "$ref": "text-graph-v1.schema.json#/$defs/document" },
+    "anchors": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/anchor" } },
+    "nodes": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/edge" } },
+    "origins": {
+      "type": "object",
+      "required": ["node_ids", "edge_ids", "anchor_ids"],
+      "properties": {
+        "node_ids": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/nodeId" }, "uniqueItems": true },
+        "edge_ids": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/edgeId" }, "uniqueItems": true },
+        "anchor_ids": { "type": "array", "items": { "$ref": "text-graph-v1.schema.json#/$defs/anchorId" }, "uniqueItems": true }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

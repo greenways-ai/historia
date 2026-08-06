@@ -33,7 +33,8 @@ export default defineConfig({
           { label: "Browser collection", slug: "collect/browser" },
           { label: "Privacy & data handling", slug: "collect/privacy" },
           { label: "Local application", slug: "collect/app" },
-          { label: "CLI agent context", slug: "collect/cli-agents" }
+          { label: "CLI agent context", slug: "collect/cli-agents" },
+          { label: "Text graphs", slug: "concepts/text-graphs" }
         ]},
         { label: "Code history", items: [
           { label: "Install & quick start", slug: "getting-started" },
