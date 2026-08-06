@@ -28,6 +28,27 @@ replace(
 )
 
 replace(
+    "analyzers/hara/build.rs",
+    '''    let artifact = hara_wasm::whole_wasm::compile_artifact(&program)
+        .expect("lower analyzer.hal to hara-rust-full whole-Wasm");
+''',
+    '''    let artifact = hara_wasm::whole_wasm::compile_artifact(&program).unwrap_or_else(|error| {
+        eprintln!("whole-Wasm lowering failed: {error}");
+        for (function_id, function) in program.functions.iter().enumerate().skip(18) {
+            eprintln!(
+                "FUNCTION {function_id} {}",
+                function.name.as_deref().unwrap_or("<entry>")
+            );
+            for (instruction, operation) in function.code.iter().enumerate() {
+                eprintln!("  {instruction:03}: {operation}");
+            }
+        }
+        panic!("lower analyzer.hal to hara-rust-full whole-Wasm: {error}")
+    });
+''',
+)
+
+replace(
     "analyzers/hara/src/engine.rs",
     '''        let input = tree.hara_value();
         let encoded = self
