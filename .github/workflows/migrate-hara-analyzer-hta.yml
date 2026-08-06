@@ -12,9 +12,13 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: historia-pr55-hta-migration
+  cancel-in-progress: true
+
 jobs:
   migrate-and-verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
