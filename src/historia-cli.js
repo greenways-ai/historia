@@ -15,6 +15,8 @@ import { inspectOpenAIExport } from "./chat/openai-export.js";
 import { listChatConversations, loadConversationSnapshot, searchChatIndex } from "./chat/search.js";
 import { indexMissingMessageTextGraphs, loadMessageTextGraph, textGraphCounts } from "./chat/text-graph-storage.js";
 import { indexMissingGraphTopics, topicIndexCounts, topicQueryPlan } from "./chat/topic-index.js";
+import { createTransformersJsClassifier } from "./chat/neural-classifier.js";
+import { indexNeuralProjection, neuralIndexCounts, neuralIndexStatus, searchNeuralTopics } from "./chat/neural-index.js";
 import historiaChatSkill from "../skills/historia-chat-agent/SKILL.md" with { type: "text" };
 
 const VERSION = "0.1.0";
@@ -44,6 +46,9 @@ Usage:
   historia graph show <revision-oid|message-hid|graph-id> [--projection all|source|concepts|work] [--output <path>]
   historia topic index [--vault <path>] [--database <path>] [--limit <n>] [--rebuild]
   historia topic search <query...> [--topic-limit <n>] [--topic-seed-limit <n>] [--topic-min-support <n>]
+  historia neural status [--database <path>]
+  historia neural index [--model <id>] [--model-revision <sha>] [--device wasm|webgpu] [--dtype q8|fp16|fp32] [--batch-size <n>] [--limit <n>] [--rebuild] [--local-files-only]
+  historia neural search <query...> [--neural-topic-limit <n>] [--neural-related-limit <n>] [--neural-min-score <score>] [--limit <n>]
   historia context build <query...> [--budget <tokens>] [--max-conversations <n>] [--radius <n>] [--include-branches] [--historical] [--expand-topics] [--format json|markdown] [--output <path>]
   historia agent install codex|kimi [--scope user|project]
 
@@ -52,6 +57,9 @@ Usage:
 Environment:
   HISTORIA_VAULT     Override the default bare Git vault path.
   HISTORIA_INDEX     Override the default rebuildable SQLite chat index.
+  HISTORIA_TRANSFORMERS_MODULE  Optional Transformers.js module specifier or file URL.
+  HISTORIA_NEURAL_MODEL         Override the default sentence encoder.
+  HISTORIA_NEURAL_CACHE         Override the Transformers.js model cache.
 `);
 }
 
@@ -104,6 +112,16 @@ function numberOption(value, fallback) {
   const number = Number(value);
   if (!Number.isFinite(number)) throw new Error(`numeric option is invalid: ${value}`);
   return number;
+}
+
+async function neuralClassifierFromOptions(values) {
+  return createTransformersJsClassifier({
+    modelId: values.model,
+    modelRevision: values["model-revision"],
+    device: values.device,
+    dtype: values.dtype,
+    localFilesOnly: Boolean(values["local-files-only"])
+  });
 }
 
 async function installAgentSkill(agent, scope = "user") {
@@ -170,6 +188,15 @@ const { positionals, values } = parseArgs({
     "topic-limit": { type: "string" },
     "topic-seed-limit": { type: "string" },
     "topic-min-support": { type: "string" },
+    model: { type: "string" },
+    "model-revision": { type: "string" },
+    device: { type: "string" },
+    dtype: { type: "string" },
+    "batch-size": { type: "string" },
+    "neural-topic-limit": { type: "string" },
+    "neural-related-limit": { type: "string" },
+    "neural-min-score": { type: "string" },
+    "local-files-only": { type: "boolean" },
     "no-raw": { type: "boolean" },
     "no-index": { type: "boolean" }
   }
@@ -331,6 +358,71 @@ async function main() {
         messageLimit: numberOption(values.limit, 250)
       }));
     } finally {
+      db.close();
+    }
+    return;
+  }
+
+  if (domain === "neural" && command === "status") {
+    const db = await openChatIndex(databasePath);
+    try {
+      await emit({ models: neuralIndexStatus(db), counts: neuralIndexCounts(db) });
+    } finally {
+      db.close();
+    }
+    return;
+  }
+  if (domain === "neural" && command === "index") {
+    const index = await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    let classifier;
+    try {
+      const textGraphs = indexMissingMessageTextGraphs(db, { limit: numberOption(values.limit, 100_000) });
+      const topics = indexMissingGraphTopics(db, { limit: numberOption(values.limit, 100_000) });
+      classifier = await neuralClassifierFromOptions(values);
+      const neural = await indexNeuralProjection(db, classifier, {
+        limit: numberOption(values.limit, 100_000),
+        batchSize: numberOption(values["batch-size"], 32),
+        rebuild: values.rebuild
+      });
+      await emit({ index, text_graphs: textGraphs, topics, neural });
+    } finally {
+      await classifier?.dispose?.();
+      db.close();
+    }
+    return;
+  }
+  if (domain === "neural" && command === "search") {
+    const query = positionals.slice(2).join(" ").trim();
+    if (!query) throw new Error("a neural search query is required");
+    const index = values["no-index"] ? null : await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    let classifier;
+    try {
+      if (!values["no-index"]) {
+        indexMissingMessageTextGraphs(db);
+        indexMissingGraphTopics(db);
+      }
+      classifier = await neuralClassifierFromOptions(values);
+      const neuralIndex = values["no-index"] ? null : await indexNeuralProjection(db, classifier, {
+        limit: 100_000,
+        batchSize: numberOption(values["batch-size"], 32)
+      });
+      const result = await searchNeuralTopics(db, query, classifier, {
+        limit: numberOption(values.limit, 20),
+        topicLimit: numberOption(values["neural-topic-limit"], 8),
+        relatedLimit: numberOption(values["neural-related-limit"], 12),
+        minSimilarity: numberOption(values["neural-min-score"], 0.28),
+        minSupport: numberOption(values["topic-min-support"], 1),
+        sourceRef: values["source-ref"],
+        role: values.role,
+        since: values.since,
+        until: values.until,
+        historical: values.historical
+      });
+      await emit({ index, neural_index: neuralIndex, ...result });
+    } finally {
+      await classifier?.dispose?.();
       db.close();
     }
     return;
