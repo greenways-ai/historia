@@ -1,6 +1,6 @@
 from pathlib import Path
 
-HARA_REV = "07469aef553d1b1a5021c6763de18516c89a3c3e"
+HARA_REV = "deb9a5fbbf2d48dd0d4b2735f82c83da557ea964"
 
 
 def replace(path: str, old: str, new: str, count: int | None = None) -> None:
@@ -72,8 +72,8 @@ sequential HTA1 argument frame, enters the prepared whole-Wasm module, and
 decodes one HTA1 result frame. Calls between functions inside `analyzer.hal`
 remain in the scoped whole-Wasm value arena and are not repeatedly serialized.
 
-The runtime revision is pinned to the HTTPS-fetchable Hara commit that contains
-#355, so a clean Cargo checkout does not require GitHub SSH credentials.
+The runtime revision is pinned to the HTTPS-fetchable Hara main commit that
+contains #355, so a clean Cargo checkout does not require GitHub SSH credentials.
 
 '''
 readme.write_text(text.replace(needle, section + needle))
