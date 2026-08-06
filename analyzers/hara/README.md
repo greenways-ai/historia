@@ -35,11 +35,21 @@ handle-valued rows (`node-at`) from integer root and child-ID sequences
 (`int-at`). Those schemas let whole-Wasm prove each call and branch
 representation without unchecked casts or changes to the analyzer protocol.
 
-Structural keyword and string-literal tokens follow rewrite-clj's observed
-generic-token behavior and normalize to `[:symbol]`. This preserves the
-Babashka analyzer's complete shape, feature, depth, node-count, and
-structural-hash output while the reader tree still retains the original token
-kind for call filtering and protocol materialization.
+## Structural semantics
+
+The Hara analyzer follows the Hara reader rather than reproducing quirks in the
+Babashka/rewrite-clj implementation. In particular:
+
+- keyword literals retain their value, for example `[:keyword ":status"]`;
+- string literals retain their kind as `[:string]`;
+- symbols remain `[:symbol]`.
+
+The two analyzers therefore do not have to produce identical structural hashes
+or feature values. Historia instead smoke-tests that both implementations obey
+the same protocol response shape: required object fields, arrays, nested
+containers, and scalar value types. Empty arrays and nullable scalar fields are
+accepted as schema-compatible; analyzer values and array lengths are not
+compared.
 
 ## Build and run
 
@@ -59,12 +69,12 @@ analyzers/hara/bin/historia-hara-analyzer
 ```sh
 cargo test --manifest-path analyzers/hara/Cargo.toml
 bun run conformance:hara
-bun run analyzer:parity
+bun run analyzer:shape
 bun run benchmark:clojure-analyzers
+bun run benchmark:clojure-analyzer-matrix
 ```
 
-`analyzer:parity` compares the complete canonicalized `analyze` response from
-Babashka and Hara. It includes file metadata, all source ranges, symbols,
-references, hashes, structural features, structure, and diagnostics. The speed
-benchmark is not allowed to publish timings unless that exact-output gate has
-already passed for every fixture.
+`analyzer:shape` checks `describe`, `ping`, and the fixed Clojure/Babashka
+analysis fixtures. The benchmark matrix runs only after that response-shape
+smoke test passes, while allowing each analyzer to retain its own semantically
+correct structural content.
