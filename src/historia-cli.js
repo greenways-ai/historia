@@ -13,6 +13,7 @@ import { defaultHistoriaIndexPath, openChatIndex } from "./chat/index-storage.js
 import { indexHistoriaChats } from "./chat/indexer.js";
 import { inspectOpenAIExport } from "./chat/openai-export.js";
 import { listChatConversations, loadConversationSnapshot, searchChatIndex } from "./chat/search.js";
+import { indexMissingMessageTextGraphs, loadMessageTextGraph, textGraphCounts } from "./chat/text-graph-storage.js";
 import historiaChatSkill from "../skills/historia-chat-agent/SKILL.md" with { type: "text" };
 
 const VERSION = "0.1.0";
@@ -38,6 +39,8 @@ Usage:
   historia chat search <query...> [--limit <n>] [--source-ref <ref>] [--role <role>] [--since <time>] [--until <time>] [--historical]
   historia chat list [--limit <n>] [--source-ref <ref>]
   historia chat show <conversation-hid> [--source-ref <ref>] [--commit <oid>]
+  historia graph index [--vault <path>] [--database <path>] [--limit <n>] [--rebuild]
+  historia graph show <revision-oid|message-hid|graph-id> [--projection all|source|concepts|work] [--output <path>]
   historia context build <query...> [--budget <tokens>] [--max-conversations <n>] [--radius <n>] [--include-branches] [--historical] [--format json|markdown] [--output <path>]
   historia agent install codex|kimi [--scope user|project]
 
@@ -149,6 +152,7 @@ const { positionals, values } = parseArgs({
     "max-conversations": { type: "string" },
     format: { type: "string" },
     output: { type: "string" },
+    projection: { type: "string" },
     browser: { type: "string" },
     "extension-id": { type: "string" },
     "host-path": { type: "string" },
@@ -255,6 +259,31 @@ async function main() {
   }
   if (domain === "chat" && command === "index") {
     await emit(await indexHistoriaChats({ vaultPath, databasePath, rebuild: values.rebuild }));
+    return;
+  }
+  if (domain === "graph" && command === "index") {
+    const index = await indexHistoriaChats({ vaultPath, databasePath, rebuild: values.rebuild });
+    const db = await openChatIndex(databasePath);
+    try {
+      const textGraphs = indexMissingMessageTextGraphs(db, { limit: numberOption(values.limit, 100_000) });
+      await emit({ index, text_graphs: textGraphs, counts: textGraphCounts(db) });
+    } finally {
+      db.close();
+    }
+    return;
+  }
+  if (domain === "graph" && command === "show") {
+    if (!inputPath) throw new Error("a text graph, message, or revision identifier is required");
+    if (!values["no-index"]) await indexHistoriaChats({ vaultPath, databasePath });
+    const db = await openChatIndex(databasePath);
+    try {
+      indexMissingMessageTextGraphs(db);
+      const graph = loadMessageTextGraph(db, inputPath, { projection: values.projection ?? "all" });
+      if (!graph) throw new Error(`text graph not found: ${inputPath}`);
+      await emit(graph, { output: values.output });
+    } finally {
+      db.close();
+    }
     return;
   }
 

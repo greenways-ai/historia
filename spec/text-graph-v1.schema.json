@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specs.hara-lang.io/historia/text-graph-v1.schema.json",
+  "title": "Historia Text Graph v1",
+  "type": "object",
+  "required": ["$schema", "graph_id", "analyzer", "document", "anchors", "nodes", "edges", "diagnostics"],
+  "properties": {
+    "$schema": { "const": "historia.text.graph/v1" },
+    "graph_id": { "$ref": "#/$defs/graphId" },
+    "analyzer": { "$ref": "#/$defs/analyzer" },
+    "document": { "$ref": "#/$defs/document" },
+    "anchors": { "type": "array", "items": { "$ref": "#/$defs/anchor" } },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } },
+    "diagnostics": { "type": "array", "items": { "type": "object" } }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "revisionOid": { "type": "string", "pattern": "^[a-f0-9]{40,64}$" },
+    "graphId": { "type": "string", "pattern": "^historia:text-graph:[a-f0-9]{64}$" },
+    "anchorId": { "type": "string", "pattern": "^historia:text-anchor:[a-f0-9]{64}$" },
+    "nodeId": { "type": "string", "pattern": "^historia:text-node:[a-f0-9]{64}$" },
+    "edgeId": { "type": "string", "pattern": "^historia:text-edge:[a-f0-9]{64}$" },
+    "analyzer": {
+      "type": "object",
+      "required": ["name", "version", "fingerprint"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "fingerprint": { "$ref": "#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "document": {
+      "type": "object",
+      "required": ["revision_oid", "message_hid", "role", "block_count", "source_sha256", "byte_count"],
+      "properties": {
+        "revision_oid": { "$ref": "#/$defs/revisionOid" },
+        "message_hid": { "type": ["string", "null"] },
+        "role": { "type": "string", "minLength": 1 },
+        "block_count": { "type": "integer", "minimum": 0 },
+        "source_sha256": { "$ref": "#/$defs/digest" },
+        "byte_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "anchor": {
+      "type": "object",
+      "required": ["anchor_id", "revision_oid", "block_index", "start_byte", "end_byte", "exact_sha256", "exact", "role"],
+      "properties": {
+        "anchor_id": { "$ref": "#/$defs/anchorId" },
+        "revision_oid": { "$ref": "#/$defs/revisionOid" },
+        "block_index": { "type": "integer", "minimum": 0 },
+        "start_byte": { "type": "integer", "minimum": 0 },
+        "end_byte": { "type": "integer", "minimum": 0 },
+        "exact_sha256": { "$ref": "#/$defs/digest" },
+        "exact": { "type": "string" },
+        "role": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "node": {
+      "type": "object",
+      "required": ["node_id", "layer", "kind", "label", "anchor_ids", "source_hash", "structural_hash", "properties"],
+      "properties": {
+        "node_id": { "$ref": "#/$defs/nodeId" },
+        "layer": { "enum": ["source", "reference", "semantic", "discourse", "work", "lineage", "provenance"] },
+        "kind": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "anchor_ids": { "type": "array", "items": { "$ref": "#/$defs/anchorId" }, "uniqueItems": true },
+        "source_hash": { "$ref": "#/$defs/digest" },
+        "structural_hash": { "$ref": "#/$defs/digest" },
+        "properties": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "edge": {
+      "type": "object",
+      "required": ["edge_id", "from", "to", "kind", "layer", "confidence", "resolution", "anchor_ids", "properties"],
+      "properties": {
+        "edge_id": { "$ref": "#/$defs/edgeId" },
+        "from": { "$ref": "#/$defs/nodeId" },
+        "to": { "$ref": "#/$defs/nodeId" },
+        "kind": { "type": "string", "minLength": 1 },
+        "layer": { "enum": ["source", "reference", "semantic", "discourse", "work", "lineage", "provenance"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "resolution": { "enum": ["observed", "parsed", "resolved", "inferred", "curated", "generated", "candidate"] },
+        "anchor_ids": { "type": "array", "items": { "$ref": "#/$defs/anchorId" }, "uniqueItems": true },
+        "properties": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

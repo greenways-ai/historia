@@ -4,7 +4,7 @@ import { Database } from "bun:sqlite";
 import { defaultHistoriaIndexPath } from "./paths.js";
 export { defaultHistoriaIndexPath } from "./paths.js";
 
-export const CHAT_INDEX_SCHEMA_VERSION = 1;
+export const CHAT_INDEX_SCHEMA_VERSION = 2;
 
 const MIGRATIONS = [
   `
@@ -154,6 +154,78 @@ const MIGRATIONS = [
   CREATE INDEX chat_message_observations_conversation ON chat_message_observations(conversation_hid, source_ref, commit_oid, active_position);
   CREATE INDEX chat_edges_from ON chat_edges(conversation_hid, from_message_hid);
   CREATE INDEX chat_edges_to ON chat_edges(conversation_hid, to_message_hid);
+  `,
+  `
+  CREATE TABLE chat_text_graphs (
+    graph_id TEXT PRIMARY KEY,
+    revision_oid TEXT NOT NULL REFERENCES chat_message_revisions(revision_oid) ON DELETE CASCADE,
+    analyzer_name TEXT NOT NULL,
+    analyzer_version TEXT NOT NULL,
+    analyzer_fingerprint TEXT NOT NULL,
+    source_sha256 TEXT NOT NULL,
+    graph_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (revision_oid, analyzer_fingerprint)
+  );
+
+  CREATE TABLE chat_text_graph_anchors (
+    graph_id TEXT NOT NULL REFERENCES chat_text_graphs(graph_id) ON DELETE CASCADE,
+    anchor_id TEXT NOT NULL,
+    revision_oid TEXT NOT NULL,
+    block_index INTEGER NOT NULL,
+    start_byte INTEGER NOT NULL,
+    end_byte INTEGER NOT NULL,
+    exact_sha256 TEXT NOT NULL,
+    exact_text TEXT NOT NULL,
+    role TEXT NOT NULL,
+    PRIMARY KEY (graph_id, anchor_id)
+  );
+
+  CREATE TABLE chat_text_graph_nodes (
+    graph_id TEXT NOT NULL REFERENCES chat_text_graphs(graph_id) ON DELETE CASCADE,
+    node_id TEXT NOT NULL,
+    layer TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    label TEXT NOT NULL,
+    source_hash TEXT NOT NULL,
+    structural_hash TEXT NOT NULL,
+    properties_json TEXT NOT NULL,
+    PRIMARY KEY (graph_id, node_id)
+  );
+
+  CREATE TABLE chat_text_graph_node_anchors (
+    graph_id TEXT NOT NULL,
+    node_id TEXT NOT NULL,
+    anchor_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    PRIMARY KEY (graph_id, node_id, anchor_id, role),
+    FOREIGN KEY (graph_id, node_id) REFERENCES chat_text_graph_nodes(graph_id, node_id) ON DELETE CASCADE,
+    FOREIGN KEY (graph_id, anchor_id) REFERENCES chat_text_graph_anchors(graph_id, anchor_id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE chat_text_graph_edges (
+    graph_id TEXT NOT NULL REFERENCES chat_text_graphs(graph_id) ON DELETE CASCADE,
+    edge_id TEXT NOT NULL,
+    from_node_id TEXT NOT NULL,
+    to_node_id TEXT NOT NULL,
+    layer TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    resolution TEXT NOT NULL,
+    anchor_ids_json TEXT NOT NULL,
+    properties_json TEXT NOT NULL,
+    PRIMARY KEY (graph_id, edge_id),
+    FOREIGN KEY (graph_id, from_node_id) REFERENCES chat_text_graph_nodes(graph_id, node_id) ON DELETE CASCADE,
+    FOREIGN KEY (graph_id, to_node_id) REFERENCES chat_text_graph_nodes(graph_id, node_id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX chat_text_graphs_revision ON chat_text_graphs(revision_oid, analyzer_fingerprint);
+  CREATE INDEX chat_text_graph_nodes_kind ON chat_text_graph_nodes(layer, kind, graph_id);
+  CREATE INDEX chat_text_graph_nodes_structure ON chat_text_graph_nodes(structural_hash);
+  CREATE INDEX chat_text_graph_anchors_revision ON chat_text_graph_anchors(revision_oid, block_index, start_byte);
+  CREATE INDEX chat_text_graph_edges_kind ON chat_text_graph_edges(layer, kind, graph_id);
+  CREATE INDEX chat_text_graph_edges_from ON chat_text_graph_edges(graph_id, from_node_id);
+  CREATE INDEX chat_text_graph_edges_to ON chat_text_graph_edges(graph_id, to_node_id);
   `
 ];
 
@@ -183,6 +255,11 @@ export function clearChatIndex(db) {
   db.exec("BEGIN IMMEDIATE");
   try {
     db.exec(`
+      DELETE FROM chat_text_graph_node_anchors;
+      DELETE FROM chat_text_graph_edges;
+      DELETE FROM chat_text_graph_nodes;
+      DELETE FROM chat_text_graph_anchors;
+      DELETE FROM chat_text_graphs;
       DELETE FROM chat_message_search;
       DELETE FROM chat_message_documents;
       DELETE FROM chat_edges;
@@ -214,6 +291,9 @@ export function chatIndexCounts(db) {
     message_identities: count("chat_message_identities"),
     message_revisions: count("chat_message_revisions"),
     message_observations: count("chat_message_observations"),
-    edges: count("chat_edges")
+    edges: count("chat_edges"),
+    text_graphs: count("chat_text_graphs"),
+    text_graph_nodes: count("chat_text_graph_nodes"),
+    text_graph_edges: count("chat_text_graph_edges")
   };
 }
