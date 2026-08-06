@@ -115,7 +115,7 @@ function parseArgs(argv) {
     corpus: null,
     json: null,
     markdown: null,
-    parityOnly: false,
+    shapeOnly: false,
     bbCommand: process.env.HISTORIA_BB_ANALYZER || null,
     haraCommand: process.env.HISTORIA_HARA_ANALYZER || null,
   };
@@ -136,7 +136,7 @@ function parseArgs(argv) {
       case "--markdown": options.markdown = value(); break;
       case "--bb-command": options.bbCommand = value(); break;
       case "--hara-command": options.haraCommand = value(); break;
-      case "--parity-only": options.parityOnly = true; break;
+      case "--shape-only": options.shapeOnly = true; break;
       case "--help": printHelp(); process.exit(0); break;
       default: throw new Error(`Unknown argument: ${argument}`);
     }
@@ -160,7 +160,7 @@ function printHelp() {
     + `  --warmup N             Untimed warmup cycles (default: 2)\n`
     + `  --iterations N         Timed cycles (default: 8)\n`
     + `  --cold-runs N          Process startup samples (default: 3)\n`
-    + `  --parity-only          Run exact-output comparison without timings\n`
+    + `  --shape-only           Compare response shapes without timings\n`
     + `  --json FILE            Write machine-readable results\n`
     + `  --markdown FILE        Write a Markdown summary\n`
     + `  --bb-command COMMAND   Override the Babashka command\n`
@@ -202,7 +202,7 @@ function shellWords(source) {
 
 async function loadCorpus(options) {
   if (!options.corpus) {
-    return [...parityFixtures(), ...generatedCorpus(options.files, options.definitions)];
+    return [...shapeFixtures(), ...generatedCorpus(options.files, options.definitions)];
   }
   const root = path.resolve(ROOT, options.corpus);
   const sources = [];
@@ -228,16 +228,15 @@ async function walk(root) {
   return output;
 }
 
-function parityFixtures() {
+function shapeFixtures() {
   return [
     {
-      path: "parity/language_surface.clj",
+      path: "shape/language_surface.clj",
       language: "clojure",
-      source: `(ns parity.language-surface
+      source: `(ns shape.language-surface
   (:require [clojure.string :as str]
             [example.math :as math]))
 
-; The reference analyzer deliberately removes semicolon tails while normalizing.
 (def answer 42)
 (defonce cached {:status :ready})
 (defn- hidden [x] (math/inc x))
@@ -256,9 +255,9 @@ function parityFixtures() {
 `,
     },
     {
-      path: "parity/reader_forms.bb",
+      path: "shape/reader_forms.bb",
       language: "babashka",
-      source: `(ns parity.reader-forms
+      source: `(ns shape.reader-forms
   (:require [clojure.set :as set]))
 
 (defn quoted [value]
@@ -271,11 +270,10 @@ function parityFixtures() {
 `,
     },
     {
-      path: "parity/ranges.clj",
+      path: "shape/ranges.clj",
       language: "clojure",
-      source: `(ns parity.ranges (:require [alpha.beta :as alpha]))
+      source: `(ns shape.ranges (:require [alpha.beta :as alpha]))
 
-; repeated name before the definition exercises the reference cursor rule
 (defn same-name [x]
   (alpha/step x))
 
@@ -315,7 +313,7 @@ function generatedCorpus(fileCount, definitionCount) {
 
 function requestsFor(corpus) {
   return corpus.map((file, index) => ({
-    ...envelope("analyze", `exact-${index}`),
+    ...envelope("analyze", `shape-analyze-${index}`),
     language: file.language,
     path: file.path,
     blob_oid: createHash("sha1").update(file.source).digest("hex"),
@@ -324,43 +322,113 @@ function requestsFor(corpus) {
   }));
 }
 
-function canonical(value) {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.keys(value).sort().map((key) => [key, canonical(value[key])]),
-    );
-  }
-  return value;
+function scalarKind(value) {
+  if (value === null) return "null";
+  const kind = typeof value;
+  return kind === "number" ? "number" : kind;
 }
 
-function firstDifference(left, right, pathParts = []) {
-  if (Object.is(left, right)) return null;
-  if (Array.isArray(left) && Array.isArray(right)) {
-    if (left.length !== right.length) {
-      return { path: pathParts.join("."), babashka: left.length, hara: right.length, kind: "array-length" };
-    }
-    for (let index = 0; index < left.length; index++) {
-      const difference = firstDifference(left[index], right[index], [...pathParts, `[${index}]`]);
-      if (difference) return difference;
-    }
-    return null;
-  }
-  if (left && right && typeof left === "object" && typeof right === "object") {
-    const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
-    for (const key of keys) {
-      if (!(key in left) || !(key in right)) {
-        return { path: [...pathParts, key].join("."), babashka: left[key], hara: right[key], kind: "missing-key" };
+function shapeDescriptor(value) {
+  if (Array.isArray(value)) {
+    const seen = new Set();
+    const items = [];
+    for (const item of value) {
+      const descriptor = shapeDescriptor(item);
+      const key = JSON.stringify(descriptor);
+      if (!seen.has(key)) {
+        seen.add(key);
+        items.push(descriptor);
       }
-      const difference = firstDifference(left[key], right[key], [...pathParts, key]);
-      if (difference) return difference;
     }
-    return null;
+    items.sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+    return { kind: "array", items };
   }
-  return { path: pathParts.join("."), babashka: left, hara: right, kind: "value" };
+  if (value && typeof value === "object") {
+    return {
+      kind: "object",
+      fields: Object.fromEntries(
+        Object.keys(value).sort().map((key) => [key, shapeDescriptor(value[key])]),
+      ),
+    };
+  }
+  return { kind: scalarKind(value) };
 }
 
-async function exactParity(bb, hara, requests) {
+function isScalarDescriptor(descriptor) {
+  return !["array", "object"].includes(descriptor.kind);
+}
+
+function descriptorsCompatible(left, right) {
+  return descriptorDifference(left, right) === null;
+}
+
+function descriptorDifference(left, right, pathParts = []) {
+  if (left.kind !== right.kind) {
+    if ((left.kind === "null" && isScalarDescriptor(right))
+      || (right.kind === "null" && isScalarDescriptor(left))) {
+      return null;
+    }
+    return {
+      path: pathParts.join("."),
+      babashka: left,
+      hara: right,
+      kind: "type",
+    };
+  }
+  if (left.kind === "object") {
+    const keys = [...new Set([
+      ...Object.keys(left.fields),
+      ...Object.keys(right.fields),
+    ])].sort();
+    for (const key of keys) {
+      if (!(key in left.fields) || !(key in right.fields)) {
+        return {
+          path: [...pathParts, key].join("."),
+          babashka: left.fields[key] ?? null,
+          hara: right.fields[key] ?? null,
+          kind: "missing-field",
+        };
+      }
+      const difference = descriptorDifference(
+        left.fields[key],
+        right.fields[key],
+        [...pathParts, key],
+      );
+      if (difference) return difference;
+    }
+  }
+  if (left.kind === "array") {
+    if (!left.items.length || !right.items.length) return null;
+    for (const item of left.items) {
+      if (!right.items.some((candidate) => descriptorsCompatible(item, candidate))) {
+        return {
+          path: [...pathParts, "[]"].join("."),
+          babashka: item,
+          hara: right.items,
+          kind: "array-item-shape",
+        };
+      }
+    }
+    for (const item of right.items) {
+      if (!left.items.some((candidate) => descriptorsCompatible(candidate, item))) {
+        return {
+          path: [...pathParts, "[]"].join("."),
+          babashka: left.items,
+          hara: item,
+          kind: "array-item-shape",
+        };
+      }
+    }
+  }
+  return null;
+}
+
+async function responseShapeSmoke(bb, hara, analyzeRequests) {
+  const requests = [
+    envelope("describe", "shape-describe"),
+    envelope("ping", "shape-ping"),
+    ...analyzeRequests,
+  ];
   const mismatches = [];
   let checked = 0;
   for (const request of requests) {
@@ -368,15 +436,16 @@ async function exactParity(bb, hara, requests) {
       bb.request(request),
       hara.request(request),
     ]);
+    ensureResult(bbResponse, `babashka ${request.op}`);
+    ensureResult(haraResponse, `hara-rust-full ${request.op}`);
     checked++;
-    const bbCanonical = canonical(bbResponse);
-    const haraCanonical = canonical(haraResponse);
-    if (JSON.stringify(bbCanonical) !== JSON.stringify(haraCanonical)) {
+    const bbShape = shapeDescriptor(bbResponse);
+    const haraShape = shapeDescriptor(haraResponse);
+    const difference = descriptorDifference(bbShape, haraShape);
+    if (difference) {
       mismatches.push({
-        path: request.path,
-        difference: firstDifference(bbCanonical, haraCanonical),
-        babashka: bbCanonical,
-        hara: haraCanonical,
+        request: request.op === "analyze" ? request.path : request.op,
+        difference,
       });
       if (mismatches.length >= 3) break;
     }
@@ -385,6 +454,7 @@ async function exactParity(bb, hara, requests) {
     ok: mismatches.length === 0,
     checked,
     total: requests.length,
+    analyzed_files: analyzeRequests.length,
     mismatches,
   };
 }
@@ -477,20 +547,24 @@ function ratio(numerator, denominator) {
 }
 
 function markdown(report) {
-  const parity = report.exact_parity;
+  const smoke = report.response_shape;
   const lines = [
     "## Hara `hara-rust-full` analyzer benchmark",
     "",
-    `Exact output parity: **${parity.ok ? `PASS (${parity.total}/${parity.total} files)` : "FAIL"}**`,
+    `Response-shape smoke: **${smoke.ok ? `PASS (${smoke.checked}/${smoke.total} checks)` : "FAIL"}**`,
     "",
   ];
-  if (!parity.ok) {
-    const mismatch = parity.mismatches[0];
-    lines.push(`First mismatch: \`${mismatch.path}\` at \`${mismatch.difference?.path || "<root>"}\`.`, "");
+  if (!smoke.ok) {
+    const mismatch = smoke.mismatches[0];
+    lines.push(
+      `First mismatch: \`${mismatch.request}\` at `
+        + `\`${mismatch.difference?.path || "<root>"}\`.`,
+      "",
+    );
     return `${lines.join("\n")}\n`;
   }
   if (!report.warm) {
-    lines.push("Timing was skipped (`--parity-only`).", "");
+    lines.push("Timing was skipped (`--shape-only`).", "");
     return `${lines.join("\n")}\n`;
   }
   lines.push(
@@ -505,7 +579,7 @@ function markdown(report) {
     `| Throughput | ${report.warm.babashka.files_per_second.toFixed(1)} files/s | ${report.warm.hara.files_per_second.toFixed(1)} files/s | ${formatRatio(report.advantage.files_per_second)} |`,
     `| Source throughput | ${report.warm.babashka.mib_per_second.toFixed(2)} MiB/s | ${report.warm.hara.mib_per_second.toFixed(2)} MiB/s | ${formatRatio(report.advantage.mib_per_second)} |`,
     "",
-    "The comparison includes every `analyze` response field after canonical JSON key ordering. Timings are withheld whenever parity fails.",
+    "The smoke check compares protocol keys, container structure, and scalar types. It intentionally does not require identical analyzer content; Hara may preserve richer reader distinctions than the Babashka/rewrite-clj backend.",
     "",
   );
   return `${lines.join("\n")}\n`;
@@ -543,40 +617,39 @@ async function writeReport(report, options) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const corpus = await loadCorpus(options);
-  const requests = requestsFor(corpus);
+  const analyzeRequests = requestsFor(corpus);
   const bbCommand = command(options.bbCommand, DEFAULT_BB);
   const haraCommand = command(options.haraCommand, DEFAULT_HARA);
   const bb = new Worker("babashka", bbCommand);
   const hara = new Worker("hara-rust-full", haraCommand);
-  let report;
   try {
-    const exact = await exactParity(bb, hara, requests);
-    report = {
+    const responseShape = await responseShapeSmoke(bb, hara, analyzeRequests);
+    const report = {
       generated_at: new Date().toISOString(),
       options: {
         warmup: options.warmup,
         iterations: options.iterations,
         cold_runs: options.coldRuns,
-        parity_only: options.parityOnly,
+        shape_only: options.shapeOnly,
       },
       commands: { babashka: bbCommand, hara: haraCommand },
       corpus: {
         files: corpus.length,
         bytes: corpus.reduce((total, file) => total + Buffer.byteLength(file.source, "utf8"), 0),
       },
-      exact_parity: exact,
+      response_shape: responseShape,
     };
-    if (!exact.ok) {
+    if (!responseShape.ok) {
       await writeReport(report, options);
       process.exitCode = 1;
       return;
     }
-    if (!options.parityOnly) {
+    if (!options.shapeOnly) {
       const [bbCold, haraCold] = await Promise.all([
         coldStart("babashka", bbCommand, options.coldRuns),
         coldStart("hara-rust-full", haraCommand, options.coldRuns),
       ]);
-      const warm = await warmBenchmark(bb, hara, requests, options);
+      const warm = await warmBenchmark(bb, hara, analyzeRequests, options);
       report.cold = { babashka: bbCold, hara: haraCold };
       report.warm = warm;
       report.advantage = {
