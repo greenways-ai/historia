@@ -1,5 +1,6 @@
 name: Finalize PR55 HTA1 migration
 
+# Temporary branch-only executor. It deletes itself after a green migration.
 on:
   push:
     branches:
