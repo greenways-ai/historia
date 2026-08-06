@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 const ANALYZER_NAMESPACE: &str = "greenways-historian.hara-analyzer";
 // Updated together with the pinned hara-wasm git revision in Cargo.toml.
-const HARA_RUNTIME_REV: &str = "65ccb88ff42ec2774f27cc176abbc034ba0ec221";
+const HARA_RUNTIME_REV: &str = "79a289f36ec6528426da88cb9bcc80c504bfd9eb";
 
 fn main() {
     println!("cargo:rerun-if-changed=analyzer.hal");
