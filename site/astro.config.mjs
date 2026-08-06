@@ -34,7 +34,8 @@ export default defineConfig({
           { label: "Privacy & data handling", slug: "collect/privacy" },
           { label: "Local application", slug: "collect/app" },
           { label: "CLI agent context", slug: "collect/cli-agents" },
-          { label: "Text graphs", slug: "concepts/text-graphs" }
+          { label: "Text graphs", slug: "concepts/text-graphs" },
+          { label: "Neural topic retrieval", slug: "concepts/neural-retrieval" }
         ]},
         { label: "Code history", items: [
           { label: "Install & quick start", slug: "getting-started" },

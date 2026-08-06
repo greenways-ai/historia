@@ -4,7 +4,7 @@ import { Database } from "bun:sqlite";
 import { defaultHistoriaIndexPath } from "./paths.js";
 export { defaultHistoriaIndexPath } from "./paths.js";
 
-export const CHAT_INDEX_SCHEMA_VERSION = 3;
+export const CHAT_INDEX_SCHEMA_VERSION = 4;
 
 const MIGRATIONS = [
   `
@@ -305,6 +305,44 @@ const MIGRATIONS = [
   CREATE INDEX chat_topic_mentions_topic ON chat_topic_mentions(topic_id, weight DESC, revision_oid);
   CREATE INDEX chat_topic_edges_left ON chat_topic_edges(left_topic_id, association_score DESC);
   CREATE INDEX chat_topic_edges_right ON chat_topic_edges(right_topic_id, association_score DESC);
+  `,
+  `
+  CREATE TABLE chat_neural_models (
+    model_fingerprint TEXT PRIMARY KEY,
+    runtime TEXT NOT NULL,
+    runtime_module TEXT NOT NULL,
+    model_id TEXT NOT NULL,
+    model_revision TEXT NOT NULL,
+    device TEXT NOT NULL,
+    dtype TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    descriptor_json TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE chat_neural_message_vectors (
+    revision_oid TEXT NOT NULL REFERENCES chat_message_revisions(revision_oid) ON DELETE CASCADE,
+    model_fingerprint TEXT NOT NULL REFERENCES chat_neural_models(model_fingerprint) ON DELETE CASCADE,
+    source_sha256 TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector_blob BLOB NOT NULL,
+    labels_json TEXT NOT NULL,
+    indexed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (revision_oid, model_fingerprint)
+  );
+
+  CREATE TABLE chat_neural_topic_vectors (
+    topic_id TEXT NOT NULL REFERENCES chat_topics(topic_id) ON DELETE CASCADE,
+    model_fingerprint TEXT NOT NULL REFERENCES chat_neural_models(model_fingerprint) ON DELETE CASCADE,
+    source_sha256 TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector_blob BLOB NOT NULL,
+    indexed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (topic_id, model_fingerprint)
+  );
+
+  CREATE INDEX chat_neural_message_model ON chat_neural_message_vectors(model_fingerprint, revision_oid);
+  CREATE INDEX chat_neural_topic_model ON chat_neural_topic_vectors(model_fingerprint, topic_id);
   `
 ];
 
@@ -334,6 +372,9 @@ export function clearChatIndex(db) {
   db.exec("BEGIN IMMEDIATE");
   try {
     db.exec(`
+      DELETE FROM chat_neural_topic_vectors;
+      DELETE FROM chat_neural_message_vectors;
+      DELETE FROM chat_neural_models;
       DELETE FROM chat_topic_index_state;
       DELETE FROM chat_topic_search;
       DELETE FROM chat_topic_edges;
@@ -382,6 +423,9 @@ export function chatIndexCounts(db) {
     text_graph_edges: count("chat_text_graph_edges"),
     topics: count("chat_topics"),
     topic_mentions: count("chat_topic_mentions"),
-    topic_edges: count("chat_topic_edges")
+    topic_edges: count("chat_topic_edges"),
+    neural_models: count("chat_neural_models"),
+    neural_message_vectors: count("chat_neural_message_vectors"),
+    neural_topic_vectors: count("chat_neural_topic_vectors")
   };
 }
