@@ -6,6 +6,7 @@ import extensionBackground from "../../extension/src/background.js" with { type:
 import extensionCompanionHtml from "../../extension/src/companion.html" with { type: "text" };
 import extensionCompanionCss from "../../extension/src/companion.css" with { type: "text" };
 import extensionCompanionJavaScript from "../../extension/src/companion.js" with { type: "text" };
+import extensionNativeProvider from "../../extension/src/native-provider.js" with { type: "text" };
 import extensionCompanionRoutes from "../../extension/src/companion-routes.js" with { type: "text" };
 import extensionCompanionState from "../../extension/src/companion-state.js" with { type: "text" };
 import extensionCompanionStorage from "../../extension/src/companion-storage.js" with { type: "text" };
@@ -22,6 +23,7 @@ const BUNDLE_FILES = Object.freeze({
   "src/companion.html": extensionCompanionHtml,
   "src/companion.css": extensionCompanionCss,
   "src/companion.js": extensionCompanionJavaScript,
+  "src/native-provider.js": extensionNativeProvider,
   "src/companion-routes.js": extensionCompanionRoutes,
   "src/companion-state.js": extensionCompanionState,
   "src/companion-storage.js": extensionCompanionStorage,

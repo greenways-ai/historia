@@ -1,15 +1,15 @@
-import { chatIndexCounts, defaultHistoriaIndexPath, openChatIndex } from "../chat/index-storage.js";
+import { defaultHistoriaIndexPath } from "../chat/index-storage.js";
 import { indexHistoriaChats } from "../chat/indexer.js";
 import { defaultHistoriaVaultPath } from "../chat/paths.js";
-import { GitVault } from "../vault/git-writer.js";
 import { archiveBrowserObservation, BROWSER_COLLECTOR_VERSION } from "./archive.js";
+import { createHistoriaNativeProvider } from "./native-provider.js";
 import {
   decodeNativeMessages,
   errorResponse,
   NATIVE_PROTOCOL_VERSION,
   successResponse,
   validateNativeRequest,
-  writeNativeMessage
+  writeNativeMessage,
 } from "./protocol.js";
 
 function normalizeCaller(value) {
@@ -56,31 +56,15 @@ function assertAllowedCaller(caller, allowedCallers) {
   return normalized;
 }
 
-async function status({ vaultPath, databasePath }) {
-  const vault = await GitVault.init(vaultPath);
-  const verification = await vault.verify();
-  const indexed = await indexHistoriaChats({ vaultPath, databasePath });
-  const db = await openChatIndex(databasePath);
-  try {
-    return {
-      vault: vault.repository,
-      index: databasePath,
-      verification,
-      indexed,
-      counts: chatIndexCounts(db)
-    };
-  } finally {
-    db.close();
-  }
-}
-
 export function createNativeCollectHandler({
   vaultPath = defaultHistoriaVaultPath(),
   databasePath = defaultHistoriaIndexPath(vaultPath),
   caller = null,
-  allowedCallers = configuredCallers()
+  allowedCallers = configuredCallers(),
+  provider = createHistoriaNativeProvider({ vaultPath, databasePath }),
 } = {}) {
   const verifiedCaller = assertAllowedCaller(caller, configuredCallers(allowedCallers));
+  if (!provider || typeof provider.handle !== "function") throw new TypeError("Historia native host requires a provider");
   return async (input) => {
     const request = validateNativeRequest(input);
     if (request.op === "ping") {
@@ -88,17 +72,27 @@ export function createNativeCollectHandler({
         collector: "historia-browser-collect",
         collector_version: BROWSER_COLLECTOR_VERSION,
         protocol_version: NATIVE_PROTOCOL_VERSION,
+        provider_protocol: provider.protocol,
         caller: verifiedCaller,
-        capabilities: ["capture", "status", "git-vault", "sqlite-index"]
+        capabilities: [
+          "capture",
+          "status",
+          "git-vault",
+          "sqlite-index",
+          ...(provider.operations ?? []),
+        ],
       });
     }
     if (request.op === "status") {
-      return successResponse(request.request_id, await status({ vaultPath, databasePath }));
+      return successResponse(request.request_id, await provider.handle("history/status", request.payload));
+    }
+    if (request.op !== "capture") {
+      return successResponse(request.request_id, await provider.handle(request.op, request.payload));
     }
     const archived = await archiveBrowserObservation({
       observation: request.observation,
       vaultPath,
-      ref: request.options.ref ?? null
+      ref: request.options.ref ?? null,
     });
     const index = request.options.index === false
       ? null
@@ -113,7 +107,7 @@ export function createNativeCollectHandler({
       capture_sha256: archived.captureSha256 ?? archived.receipt?.archive?.sha256 ?? null,
       receipt_path: archived.receiptPath,
       stats: archived.receipt?.stats ?? null,
-      index
+      index,
     });
   };
 }
@@ -125,7 +119,7 @@ export async function runNativeCollectHost({
   caller = nativeCallerFromArgv(),
   vaultPath = defaultHistoriaVaultPath(),
   databasePath = defaultHistoriaIndexPath(vaultPath),
-  allowedCallers = configuredCallers()
+  allowedCallers = configuredCallers(),
 } = {}) {
   let handler;
   try {

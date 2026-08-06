@@ -5,6 +5,18 @@ const NATIVE_HOST = "ai.greenways.historia_collect";
 const pending = new Map();
 let nativePort = null;
 
+const PROVIDER_MESSAGES = new Map([
+  ["historia:history-status", { op: "history/status", timeoutMs: 60_000 }],
+  ["historia:history-list", { op: "history/list", timeoutMs: 60_000 }],
+  ["historia:history-search", { op: "history/search", timeoutMs: 60_000 }],
+  ["historia:history-conversation", { op: "history/conversation", timeoutMs: 60_000 }],
+  ["historia:history-import-export", { op: "history/import-export", timeoutMs: 10 * 60_000 }],
+  ["historia:history-sync-status", { op: "history/sync-status", timeoutMs: 30_000 }],
+  ["historia:history-sync-pull", { op: "history/sync-pull", timeoutMs: 30_000 }],
+  ["historia:history-sync-push", { op: "history/sync-push", timeoutMs: 30_000 }],
+  ["historia:context-build", { op: "context/build", timeoutMs: 90_000 }],
+]);
+
 function requestId() {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
@@ -49,7 +61,11 @@ function connectNative() {
     pending.delete(message.request_id);
     clearTimeout(request.timer);
     if (message.ok) request.resolve(message.result);
-    else request.reject(new Error(message.error?.message ?? "Historia native host rejected the request"));
+    else {
+      const error = new Error(message.error?.message ?? "Historia native host rejected the request");
+      error.code = message.error?.code ?? "native_error";
+      request.reject(error);
+    }
   });
   nativePort.onDisconnect.addListener(() => {
     const message = extensionApi.runtime.lastError?.message || "Historia native host disconnected";
@@ -87,14 +103,23 @@ async function activeChatMetadata() {
   return chatMetadataFromTab(tab);
 }
 
+function providerRequest(request) {
+  const route = PROVIDER_MESSAGES.get(request?.type);
+  if (!route) return null;
+  const payload = request?.payload && typeof request.payload === "object" && !Array.isArray(request.payload)
+    ? request.payload
+    : {};
+  return nativeRequest(route.op, { payload }, { timeoutMs: route.timeoutMs });
+}
+
 function handleMessage(request) {
   if (request?.type === "historia:active-chat") return activeChatMetadata();
   if (request?.type === "historia:open-destination") {
     return tabsCreate({ url: resolveCompanionDestination(request.destination), active: true });
   }
-  if (request?.type === "historia:native-status") return nativeRequest("status");
+  if (request?.type === "historia:native-status") return nativeRequest("history/status", {}, { timeoutMs: 60_000 });
   if (request?.type === "historia:native-ping") return nativeRequest("ping", {}, { timeoutMs: 15_000 });
-  return undefined;
+  return providerRequest(request) ?? undefined;
 }
 
 extensionApi.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -102,7 +127,7 @@ extensionApi.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (!operation) return undefined;
   const promise = Promise.resolve(operation).then(
     (result) => ({ ok: true, result }),
-    (error) => ({ ok: false, error: error.message }),
+    (error) => ({ ok: false, error: error.message, code: error.code ?? "native_error" }),
   );
   if (typeof globalThis.browser !== "undefined") return promise;
   promise.then(sendResponse);

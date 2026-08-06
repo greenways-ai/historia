@@ -2,6 +2,24 @@ export const NATIVE_PROTOCOL_VERSION = "1.0";
 export const DEFAULT_MAX_NATIVE_REQUEST_BYTES = 32 * 1024 * 1024;
 export const DEFAULT_MAX_NATIVE_RESPONSE_BYTES = 1024 * 1024;
 
+export const NATIVE_OPERATIONS = Object.freeze([
+  "ping",
+  "capture",
+  "status",
+  "history/status",
+  "history/list",
+  "history/search",
+  "history/conversation",
+  "history/import-export",
+  "history/sync-status",
+  "history/sync-pull",
+  "history/sync-push",
+  "context/build",
+]);
+
+const OPERATION_SET = new Set(NATIVE_OPERATIONS);
+const REQUEST_KEYS = new Set(["protocol_version", "request_id", "op", "observation", "options", "payload"]);
+
 export async function* decodeNativeMessages(readable, { maxBytes = DEFAULT_MAX_NATIVE_REQUEST_BYTES } = {}) {
   let buffer = Buffer.alloc(0);
   for await (const chunk of readable) {
@@ -46,18 +64,30 @@ function requestId(value) {
   return value;
 }
 
+function plainObject(value, label) {
+  if (value === undefined || value === null) return {};
+  if (typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) throw new Error(`${label} must be a plain object`);
+  return value;
+}
+
 export function validateNativeRequest(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("native request must be an object");
+  for (const key of Object.keys(value)) {
+    if (!REQUEST_KEYS.has(key)) throw new Error(`native request contains unsupported field: ${key}`);
+  }
   if (value.protocol_version !== NATIVE_PROTOCOL_VERSION) throw new Error(`unsupported native protocol version: ${value.protocol_version}`);
   const op = typeof value.op === "string" ? value.op : "";
-  if (!new Set(["ping", "capture", "status"]).has(op)) throw new Error(`unsupported native operation: ${op || "missing"}`);
-  return {
+  if (!OPERATION_SET.has(op)) throw new Error(`unsupported native operation: ${op || "missing"}`);
+  return Object.freeze({
     protocol_version: NATIVE_PROTOCOL_VERSION,
     request_id: requestId(value.request_id),
     op,
     observation: value.observation,
-    options: value.options && typeof value.options === "object" && !Array.isArray(value.options) ? value.options : {}
-  };
+    options: plainObject(value.options, "native request options"),
+    payload: plainObject(value.payload, "native request payload"),
+  });
 }
 
 export function successResponse(requestIdValue, result) {
@@ -65,18 +95,18 @@ export function successResponse(requestIdValue, result) {
     protocol_version: NATIVE_PROTOCOL_VERSION,
     request_id: requestIdValue,
     ok: true,
-    result
+    result,
   };
 }
 
-export function errorResponse(requestIdValue, error, code = "collect_error") {
+export function errorResponse(requestIdValue, error, code = error?.code || "collect_error") {
   return {
     protocol_version: NATIVE_PROTOCOL_VERSION,
     request_id: typeof requestIdValue === "string" && requestIdValue ? requestIdValue : "invalid-request",
     ok: false,
     error: {
       code,
-      message: error instanceof Error ? error.message : String(error)
-    }
+      message: error instanceof Error ? error.message : String(error),
+    },
   };
 }
