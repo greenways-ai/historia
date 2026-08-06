@@ -31,6 +31,11 @@
   [nodes node-id]
   (nth nodes node-id))
 
+(defn ^{:schema [:fn [:any :int] :int]}
+  int-at
+  [values index]
+  (nth values index))
+
 (defn ^{:schema [:fn [:any :int :int] :any]}
   node-field
   [nodes node-id field]
@@ -112,7 +117,7 @@
      nodes
      children
      (+ index 1)
-     (append output (shape-node nodes (nth children index))))
+     (append output (shape-node nodes (int-at children index))))
     output))
 
 (defn ^{:schema [:fn [:any :int :int] :any]}
@@ -120,7 +125,7 @@
   [nodes node-id output-tag]
   (let [children (node-children nodes node-id)]
     (if (< 0 (count children))
-      [output-tag (shape-node nodes (nth children 0))]
+      [output-tag (shape-node nodes (int-at children 0))]
       [output-tag nil])))
 
 (defn ^{:schema [:fn [:any :int] :any]}
@@ -128,7 +133,7 @@
   [nodes node-id]
   (let [children (node-children nodes node-id)]
     (if (< 0 (count children))
-      (let [head-id (nth children 0)
+      (let [head-id (int-at children 0)
             head-token (node-token nodes head-id)
             head-shape (if (= 1 (special head-token))
                          [100 head-token]
@@ -176,12 +181,12 @@
   namespace-from-roots
   [nodes roots index]
   (if (< index (count roots))
-    (let [root-id (nth roots index)
+    (let [root-id (int-at roots index)
           children (node-children nodes root-id)]
       (if (= 10 (node-shape-code nodes root-id))
         (if (< 1 (count children))
-          (if (= 1 (role (node-token nodes (nth children 0))))
-            (node-token nodes (nth children 1))
+          (if (= 1 (role (node-token nodes (int-at children 0))))
+            (node-token nodes (int-at children 1))
             (namespace-from-roots nodes roots (+ index 1)))
           (namespace-from-roots nodes roots (+ index 1)))
         (namespace-from-roots nodes roots (+ index 1))))
@@ -195,18 +200,18 @@
      nodes
      clause-children
      (+ index 1)
-     (append output (nth clause-children index)))
+     (append output (int-at clause-children index)))
     output))
 
 (defn ^{:schema [:fn [:any :any :int :any] :any]}
   imports-from-ns-children
   [nodes ns-children index output]
   (if (< index (count ns-children))
-    (let [clause-id (nth ns-children index)
+    (let [clause-id (int-at ns-children index)
           clause-children (node-children nodes clause-id)]
       (if (= 10 (node-shape-code nodes clause-id))
         (if (< 0 (count clause-children))
-          (let [clause-role (role (node-token nodes (nth clause-children 0)))]
+          (let [clause-role (role (node-token nodes (int-at clause-children 0)))]
             (if (= clause-role 2)
               (imports-from-ns-children
                nodes
@@ -228,11 +233,11 @@
   imports-from-roots
   [nodes roots index]
   (if (< index (count roots))
-    (let [root-id (nth roots index)
+    (let [root-id (int-at roots index)
           children (node-children nodes root-id)]
       (if (= 10 (node-shape-code nodes root-id))
         (if (< 0 (count children))
-          (if (= 1 (role (node-token nodes (nth children 0))))
+          (if (= 1 (role (node-token nodes (int-at children 0))))
             (imports-from-ns-children nodes children 1 [])
             (imports-from-roots nodes roots (+ index 1)))
           (imports-from-roots nodes roots (+ index 1)))
@@ -243,7 +248,7 @@
   first-vector-child
   [nodes children index]
   (if (< index (count children))
-    (let [child-id (nth children index)]
+    (let [child-id (int-at children index)]
       (if (= 11 (node-shape-code nodes child-id))
         child-id
         (first-vector-child nodes children (+ index 1))))
@@ -253,12 +258,12 @@
   collect-definitions
   [nodes roots index output]
   (if (< index (count roots))
-    (let [root-id (nth roots index)
+    (let [root-id (int-at roots index)
           children (node-children nodes root-id)]
       (if (= 10 (node-shape-code nodes root-id))
         (if (< 1 (count children))
-          (let [head-id (nth children 0)
-                name-id (nth children 1)
+          (let [head-id (int-at children 0)
+                name-id (int-at children 1)
                 head-token (node-token nodes head-id)
                 kind (definition-kind head-token)
                 name-token (node-token nodes name-id)]
@@ -293,7 +298,7 @@
      definition-index
      (collect-node-references
       nodes
-      (nth children index)
+      (int-at children index)
       definition-index
       output))
     output))
@@ -306,7 +311,7 @@
         next-output
         (if (= shape-code 10)
           (if (< 0 (count children))
-            (let [head-id (nth children 0)
+            (let [head-id (int-at children 0)
                   head-token (node-token nodes head-id)]
               (if (= 0 (non-call head-token))
                 (if (= 1 (node-shape-code nodes head-id))
@@ -334,7 +339,7 @@
      (+ index 1)
      (collect-node-references
       nodes
-      (nth (nth definitions index) 0)
+      (int-at (node-at definitions index) 0)
       index
       output))
     output))
@@ -342,8 +347,8 @@
 (defn ^{:schema [:fn [:any] :any]}
   analyze
   [input]
-  (let [nodes (nth input 0)
-        roots (nth input 1)
+  (let [nodes (node-at input 0)
+        roots (node-at input 1)
         definitions (collect-definitions nodes roots 0 [])]
     [(namespace-from-roots nodes roots 0)
      (imports-from-roots nodes roots 0)
