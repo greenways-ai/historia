@@ -3,41 +3,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Historia Collect settings</title>
+  <title>Historia for ChatGPT settings</title>
   <style>
-    :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
-    body { max-width: 680px; margin: 48px auto; padding: 0 24px 64px; background: #0b1513; color: #fff9e9; }
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { max-width: 760px; margin: 48px auto; padding: 0 24px 64px; background: #0b1513; color: #fff9e9; line-height: 1.55; }
     h1, h2 { font-family: Georgia, serif; font-weight: 400; }
-    h1 { font-size: 38px; }
+    h1 { margin-bottom: 8px; font-size: 38px; }
     h2 { margin-top: 34px; font-size: 24px; }
-    label { display: block; margin: 22px 0 8px; font-weight: 700; }
-    input[type="text"] { width: 100%; box-sizing: border-box; padding: 12px; background: #14211e; color: inherit; border: 1px solid #3b4641; }
-    .check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
-    .help { color: #b4ad99; font-size: 13px; line-height: 1.5; }
-    .notice { padding: 16px 18px; border: 1px solid #3b4641; background: #14211e; }
-    button { margin-top: 24px; padding: 12px 18px; border: 0; background: #5079b4; color: white; font-weight: 700; }
+    p, li { color: #c5bdab; }
+    .notice, .card { padding: 18px; border: 1px solid #3b4641; background: #14211e; }
+    .check { display: flex; gap: 12px; align-items: flex-start; color: #fff9e9; }
+    .check input { margin-top: 5px; }
+    button { margin-top: 18px; padding: 12px 18px; border: 0; background: #5079b4; color: white; font-weight: 700; cursor: pointer; }
     #status { margin-left: 12px; color: #e0b56f; }
     a { color: #e0b56f; }
+    code { color: #aec7e8; }
   </style>
 </head>
 <body>
-  <h1>Historia Collect</h1>
-  <p class="notice">Captured ChatGPT message content, page identity, and visible attachment references are sent only through native messaging to the Historia host on this computer. The host archives them in your local Git vault. Historia does not operate a collection cloud or analytics service.</p>
-  <form id="settings">
-    <label for="sourceKey">Local source key</label>
-    <input id="sourceKey" name="sourceKey" type="text" maxlength="256" autocomplete="off">
-    <p class="help">Use a stable private label for this browser profile. It is hashed before appearing in Git refs and paths.</p>
+  <h1>Historia for ChatGPT</h1>
+  <p class="notice"><strong>Metadata only.</strong> The browser companion saves chat URLs, page titles, prompt templates, tags, notes, and tombstones. It does not read ChatGPT messages, cookies, authentication data, or undocumented provider endpoints.</p>
 
+  <form id="settings" class="card">
     <label class="check">
-      <input id="autoCapture" name="autoCapture" type="checkbox">
-      <span>Automatically collect a conversation after rendered messages change.<br><span class="help">Disabled by default. Enabling this sends later rendered changes to the same local host without another button press. Exact duplicate captures remain idempotent.</span></span>
+      <input id="syncEnabled" name="syncEnabled" type="checkbox">
+      <span><strong>Sync bookmarks and prompt templates through browser sync.</strong><br>This is disabled by default. It never includes conversation bodies, official export files, Historia Git objects, credentials, or private keys.</span>
     </label>
-
     <button type="submit">Save settings</button><span id="status" role="status"></span>
   </form>
 
+  <h2>History and context</h2>
+  <p>Use ChatGPT's official data export, then import the ZIP or <code>conversations.json</code> through the local Historia application. Historia keeps the authoritative archive in Git and builds a rebuildable local search index.</p>
+  <p><a href="companion.html">Open Historia for ChatGPT</a> · <a href="http://127.0.0.1:4319/#collect">Open local import</a></p>
+
   <h2>Data handling</h2>
-  <p class="help">Historia Collect does not read cookies, passwords, access tokens, or browser storage credentials. URL query strings and fragments are removed before archival. Uninstalling the bridge does not delete the local vault.</p>
+  <p>Removing the extension does not delete your local Historia vault. Browser-sync metadata can be disabled here and deleted through the companion's sync bundle workflow or browser account controls.</p>
   <p><a href="privacy.html">Read the complete privacy and retention disclosure</a></p>
   <script type="module" src="options.js"></script>
 </body>

@@ -1,22 +1,25 @@
+import { loadCompanionState, setCompanionSyncEnabled } from "./companion-storage.js";
+
 const extensionApi = globalThis.browser ?? globalThis.chrome;
 const form = document.querySelector("#settings");
-const sourceKey = document.querySelector("#sourceKey");
-const autoCapture = document.querySelector("#autoCapture");
+const syncEnabled = document.querySelector("#syncEnabled");
 const status = document.querySelector("#status");
 
 async function load() {
-  const values = await extensionApi.storage.local.get(["sourceKey", "autoCapture"]);
-  sourceKey.value = values.sourceKey || "browser-default";
-  autoCapture.checked = Boolean(values.autoCapture);
+  const value = await loadCompanionState(extensionApi);
+  syncEnabled.checked = value.syncEnabled;
 }
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const key = sourceKey.value.trim() || "browser-default";
-  await extensionApi.storage.local.set({ sourceKey: key, autoCapture: autoCapture.checked });
-  await extensionApi.runtime.sendMessage({ type: "historia:settings-changed" });
-  status.textContent = "Saved";
-  setTimeout(() => { status.textContent = ""; }, 1800);
+  try {
+    const result = await setCompanionSyncEnabled(syncEnabled.checked, extensionApi);
+    syncEnabled.checked = result.syncEnabled;
+    status.textContent = result.syncEnabled ? "Metadata sync enabled" : "Metadata sync disabled";
+  } catch (error) {
+    status.textContent = error.message;
+  }
+  setTimeout(() => { status.textContent = ""; }, 2400);
 });
 
 load().catch((error) => { status.textContent = error.message; });

@@ -1,130 +1,95 @@
-# Historia Collect privacy and data handling
+# Historia for ChatGPT privacy and data handling
 
-Historia Collect is a local-first archive bridge. It observes a ChatGPT
-conversation only when the user explicitly collects it or has separately enabled
-automatic collection, sends a bounded observation to a native host on the same
-computer, and stores the result in the user's local Git-native Historia vault.
+Historia for ChatGPT is a metadata-only browser companion for the local Historia
+conversation vault. It does not scrape ChatGPT conversations or operate a remote
+collection service.
 
-Historia does not operate a remote collection service for this data.
+## Data stored by the browser companion
 
-## Data collected from a rendered ChatGPT page
+After an explicit user action, the extension may store:
 
-A browser observation can include:
+- a normalized ChatGPT conversation or shared-link URL;
+- the active tab title;
+- bookmark notes and tags entered by the user;
+- prompt and context templates entered by the user;
+- canonical update timestamps and deletion tombstones.
 
-- visible user and assistant message text;
-- visible code blocks and basic formatting;
-- visible image or file references and available display metadata;
-- message roles, order, parent relationships, and the active path;
-- the current ChatGPT page origin, path, and title;
-- the private local source label configured for the browser profile.
+Only `https://chatgpt.com/c/<id>` and `/share/<id>` links are accepted. Query
+strings and fragments are removed.
 
-URL query strings and fragments are removed before archival.
+## Data the extension does not read
 
-The extension observes rendered content. It does not use undocumented ChatGPT
-APIs to enumerate unrendered conversations, branches, or account history.
+The extension does not read:
 
-## Local transfer and storage
+- user or assistant message text;
+- code blocks, attachments, images, or hidden page state;
+- browser cookies, ChatGPT access tokens, authorization headers, passwords, or
+  browser storage credentials;
+- private or undocumented provider endpoints;
+- unrelated tabs or background browsing history.
 
-The extension sends observations through browser native messaging to:
+The manifest has no ChatGPT host permissions and no content script.
+
+## Official history import
+
+Full history is imported from an official ChatGPT export ZIP, extracted
+directory, or `conversations.json` selected by the user. The local Historia
+application validates and commits the import into a bare Git vault. A local
+SQLite index is a rebuildable projection for search and context retrieval.
+
+The vault has no remote by default. Adding a Git remote, pushing refs, exporting
+a context package, or copying the vault is a separate user-controlled action.
+
+## Native messaging
+
+The extension may connect to:
 
 ```text
 ai.greenways.historia_collect
 ```
 
-The registered executable is restricted to Historia Collect's stable extension
-identity. It validates the observation and writes it to a source ref in the local
-bare Git vault. The local SQLite search index is a rebuildable projection over
-that Git history.
+for local status and Historia application transport. The native host is
+restricted to Historia's stable extension identity. The companion does not send
+ChatGPT page content over this channel.
 
-The vault has no Git remote by default. Adding a remote, pushing refs, exporting
-a context bundle, or copying the vault is a separate user-controlled action.
+## Browser metadata sync
 
-## Data the extension does not read
+Browser sync is disabled by default. When enabled, only bounded companion
+metadata is written to `storage.sync`. The state is split into digest-verified
+chunks below browser per-item quotas.
 
-Historia Collect does not read:
+The sync boundary excludes:
 
-- browser cookies;
-- access tokens, authentication headers, or passwords;
-- browser local-storage or session-storage credentials;
-- unrelated tabs or websites outside the declared ChatGPT origins;
-- undocumented provider API responses containing unrendered account history.
+- conversation bodies and official export files;
+- Git objects and SQLite indexes;
+- browser cookies and ChatGPT tokens;
+- API keys, passwords, private keys, authorization values, and bearer tokens.
 
-The observation validator rejects credential-shaped structured metadata.
+A portable `historia.chatgpt.sync/1` JSON envelope is also supported. Imports
+merge deterministically by update timestamp and preserve deletion tombstones.
 
-## No analytics or third-party collection
+## Prompt handoff
 
-The extension contains no:
+Saved prompts can be copied and ChatGPT can be opened. The extension never
+inserts text into ChatGPT and never submits a prompt automatically. The user
+reviews and pastes copied material deliberately.
 
-- analytics or telemetry SDK;
-- advertising or attribution system;
-- remote model or embedding call;
-- cloud upload endpoint;
-- third-party tracking script.
+## Firefox consent category
 
-Its ChatGPT host permissions allow the content script to observe the rendered
-page. Archive transport uses the local native-messaging channel rather than a
-Greenways network service.
-
-## Manual and automatic modes
-
-Manual collection is the default. The user opens the extension popup and chooses
-**Collect this conversation**.
-
-Automatic collection is disabled by default and must be enabled in extension
-settings. When enabled, collection is debounced after rendered message changes
-and uses the same local host and validation path. Exact duplicate observations
-remain idempotent.
-
-## Firefox consent categories
-
-Firefox 140 and newer provide built-in consent UI for extension data collection.
-Historia Collect declares these required categories:
+Firefox 140 and newer classify the explicit active-tab URL/title lookup under:
 
 ```text
 browsingActivity
-personalCommunications
-websiteContent
 ```
 
-They map to:
-
-- the current ChatGPT page origin/path/title;
-- rendered chat messages;
-- visible page text, code, and attachment references.
-
-In Historia Collect, “transmission” means transfer from the extension process to
-the local native host on the same computer. The declaration does not imply that
-Greenways receives the data.
-
-Firefox versions before 140 are not supported by the extension because they do
-not provide the same built-in consent mechanism for this declaration.
-
-## Browser permissions
-
-The extension requests only:
-
-```text
-nativeMessaging
-storage
-tabs
-```
-
-and ChatGPT page access for:
-
-```text
-https://chatgpt.com/*
-https://www.chatgpt.com/*
-https://chat.openai.com/*
-```
-
-It does not request cookies, browsing history, proxy, debugger, management,
-web-request interception, geolocation, downloads, or unlimited-storage
-permissions.
-
-`storage` holds the local source key and automatic-collection preference. The
-source key is hashed before it appears in Git refs or archive paths.
+The extension does not declare `personalCommunications` or `websiteContent`
+collection because it does not read conversation messages or page content.
 
 ## Retention and deletion
+
+Deleting a bookmark or prompt creates a tombstone so the deletion propagates to
+opted-in browser profiles. Disabling browser sync stops future writes; browser
+account controls govern retained sync data.
 
 Git history is deliberately durable. Historia distinguishes:
 
@@ -133,35 +98,12 @@ Git history is deliberately durable. Historia distinguishes:
 - **purge**: rewrite affected refs, expire reflogs, run Git garbage collection,
   and repeat the operation for every configured remote or clone.
 
-Removing the extension or running `historia-collect uninstall` removes the
-native-host registration. It does not delete the Git vault or SQLite index.
-
-## Local verification
-
-Inspect the unpacked extension generated by the installed binary:
-
-```bash
-historia-collect paths
-```
-
-Diagnose registration and host integrity:
-
-```bash
-historia-collect doctor --browser firefox
-```
-
-The embedded extension bundle has a deterministic digest and per-file checksums.
-If its materialized files are modified, the installer detects the mismatch and
-replaces them from the compiled payload.
+Removing the extension or native-host registration does not delete the Git vault
+or SQLite projection.
 
 ## Source transparency
 
-The privacy disclosure shown in the popup and settings is packaged in:
-
-```text
-extension/src/privacy.html
-```
-
-The manifest policy is tested in `test/collect-extension-policy.test.js`, and
-the installer verifies that the disclosure is included in the embedded browser
-bundle.
+The packaged browser disclosure is `extension/src/privacy.html`. Manifest and
+bundle policy are covered by `test/collect-extension-policy.test.js`,
+`test/collect-extension-bundle.test.js`, and
+`test/chatgpt-companion.test.js`.

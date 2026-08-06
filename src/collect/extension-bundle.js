@@ -3,7 +3,12 @@ import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import extensionManifest from "../../extension/manifest.json" with { type: "text" };
 import extensionBackground from "../../extension/src/background.js" with { type: "text" };
-import extensionContent from "../../extension/src/content.js" with { type: "text" };
+import extensionCompanionHtml from "../../extension/src/companion.html" with { type: "text" };
+import extensionCompanionCss from "../../extension/src/companion.css" with { type: "text" };
+import extensionCompanionJavaScript from "../../extension/src/companion.js" with { type: "text" };
+import extensionCompanionRoutes from "../../extension/src/companion-routes.js" with { type: "text" };
+import extensionCompanionState from "../../extension/src/companion-state.js" with { type: "text" };
+import extensionCompanionStorage from "../../extension/src/companion-storage.js" with { type: "text" };
 import extensionOptionsHtml from "../../extension/src/options.html" with { type: "text" };
 import extensionOptionsJavaScript from "../../extension/src/options.js" with { type: "text" };
 import extensionPopupHtml from "../../extension/src/popup.html" with { type: "text" };
@@ -14,12 +19,17 @@ const RECEIPT_NAME = ".historia-extension.json";
 const BUNDLE_FILES = Object.freeze({
   "manifest.json": extensionManifest,
   "src/background.js": extensionBackground,
-  "src/content.js": extensionContent,
+  "src/companion.html": extensionCompanionHtml,
+  "src/companion.css": extensionCompanionCss,
+  "src/companion.js": extensionCompanionJavaScript,
+  "src/companion-routes.js": extensionCompanionRoutes,
+  "src/companion-state.js": extensionCompanionState,
+  "src/companion-storage.js": extensionCompanionStorage,
   "src/options.html": extensionOptionsHtml,
   "src/options.js": extensionOptionsJavaScript,
   "src/popup.html": extensionPopupHtml,
   "src/popup.js": extensionPopupJavaScript,
-  "src/privacy.html": extensionPrivacyHtml
+  "src/privacy.html": extensionPrivacyHtml,
 });
 
 function sha256(value) {
@@ -76,7 +86,7 @@ function receipt() {
     $schema: "historia.collect.extension-bundle/v1",
     bundle_sha256: COLLECT_EXTENSION_BUNDLE_SHA256,
     generated_at: null,
-    files: FILE_RECORDS.map(({ path, byte_count, sha256: digest }) => ({ path, byte_count, sha256: digest }))
+    files: FILE_RECORDS.map(({ path, byte_count, sha256: digest }) => ({ path, byte_count, sha256: digest })),
   };
 }
 
@@ -106,7 +116,7 @@ export async function inspectCollectExtensionBundle(directory) {
     ok: current,
     directory: path,
     bundle_sha256: COLLECT_EXTENSION_BUNDLE_SHA256,
-    files: FILE_RECORDS.length
+    files: FILE_RECORDS.length,
   };
 }
 
@@ -118,7 +128,7 @@ export async function materializeCollectExtension(directory, { force = false } =
       idempotent: true,
       directory: destination,
       bundle_sha256: COLLECT_EXTENSION_BUNDLE_SHA256,
-      files: FILE_RECORDS.length
+      files: FILE_RECORDS.length,
     };
   }
 
@@ -143,6 +153,6 @@ export async function materializeCollectExtension(directory, { force = false } =
   }
 
   const verification = await inspectCollectExtensionBundle(destination);
-  if (!verification.ok) throw new Error("materialized Historia Collect extension failed checksum verification");
+  if (!verification.ok) throw new Error("materialized Historia companion extension failed checksum verification");
   return { ...verification, idempotent: false };
 }
