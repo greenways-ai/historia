@@ -29,10 +29,28 @@ historia context build "query terms" --budget 12000 --format markdown
 historia collect status
 ```
 
+When exact query wording may differ from the archived wording, build the
+rebuildable graph/topic projection and use one-hop topic expansion:
+
+```bash
+historia graph index
+historia topic search "query terms"
+historia context build "query terms" \
+  --expand-topics \
+  --budget 12000 \
+  --format markdown
+```
+
+Topic edges mean "potentially related for retrieval," not verified semantic
+identity. Always interpret the original selected messages and preserve their
+Historia citations. Distinguish direct topic matches from associated-topic
+matches when explaining why context was selected.
+
 For a file that another CLI can read:
 
 ```bash
 historia context build "query terms" \
+  --expand-topics \
   --budget 12000 \
   --max-conversations 8 \
   --radius 2 \
@@ -45,6 +63,12 @@ retrieval. Use `--historical` only when superseded message revisions are
 relevant. Use `--include-branches` only when regenerated or alternate responses
 are relevant.
 
+Bound topic expansion with `--topic-seed-limit`, `--topic-limit`, and
+`--topic-min-support` when a broad archive produces too many lateral matches.
+Prefer ordinary lexical retrieval for exact identifiers, commit hashes, quoted
+phrases, and paths. Prefer topic expansion for design themes, renamed concepts,
+and related discussions whose wording may differ.
+
 ## Reporting
 
 - Cite Historia context markers such as `[H1]` when they are present.
@@ -54,6 +78,7 @@ are relevant.
 - Treat browser-observed records as observations, not provider attestations.
 - Treat an older message revision as historical evidence rather than the current
   provider state.
+- Treat associated topics as retrieval evidence, not as claims made by the user.
 - Report an empty retrieval instead of fabricating prior conversations.
 
 ## Privacy

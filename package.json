@@ -42,7 +42,7 @@
     "release:build": "bun scripts/build-release-artifacts.js",
     "package:validate": "node scripts/validate-package-metadata.js",
     "test": "bun test",
-    "chat:test": "bun test test/chat-archive.test.js test/chat-index.test.js test/chat-schema.test.js test/chat-text-graph.test.js test/historia-cli.test.js test/object-batch.test.js",
+    "chat:test": "bun test test/chat-archive.test.js test/chat-index.test.js test/chat-schema.test.js test/chat-text-graph.test.js test/chat-topic-index.test.js test/historia-cli.test.js test/object-batch.test.js",
     "collect:test": "bun test test/collect-browser.test.js test/collect-extension-bundle.test.js test/collect-extension-policy.test.js test/collect-install.test.js test/collect-server.test.js",
     "analyzer:test": "bb -cp analyzers/clojure/src:analyzers/clojure/test analyzers/clojure/test/greenways_historian/analyzer_test.clj",
     "conformance": "bun src/cli.js analyzer check bb -cp analyzers/clojure/src -m greenways-historian.analyzer",

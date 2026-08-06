@@ -16,22 +16,55 @@ function chronological(left, right) {
     || left.message.message_hid.localeCompare(right.message.message_hid);
 }
 
+function compactRetrieval(hit) {
+  const retrieval = hit?.retrieval;
+  if (!retrieval) return null;
+  return {
+    mode: retrieval.mode,
+    lexical_rank: retrieval.lexical?.rank ?? null,
+    direct_topics: (retrieval.topics?.direct_topics ?? []).slice(0, 8).map((topic) => ({
+      topic_id: topic.topic_id,
+      label: topic.label,
+      kind: topic.kind,
+      contribution: topic.contribution
+    })),
+    associated_topics: (retrieval.topics?.associated_topics ?? []).slice(0, 8).map((topic) => ({
+      topic_id: topic.topic_id,
+      label: topic.label,
+      kind: topic.kind,
+      contribution: topic.contribution,
+      seed_topic_id: topic.seed_topic_id,
+      association_score: topic.association_score,
+      support_count: topic.support_count
+    })),
+    facets: retrieval.topics?.facets ?? [],
+    graph_node_ids: (retrieval.topics?.graph_node_ids ?? []).slice(0, 16)
+  };
+}
+
 function selectedMessages(snapshot, hits, { radius, includeBranches }) {
   const messagesByHid = new Map(snapshot.messages.map((message) => [message.message_hid, message]));
   const activeMessages = snapshot.messages.filter((message) => message.active_position !== null && message.active_position !== undefined)
     .sort((left, right) => left.active_position - right.active_position);
   const activeIndex = new Map(activeMessages.map((message, index) => [message.message_hid, index]));
   const priorities = new Map();
-  const mark = (messageHid, priority) => {
+  const retrievals = new Map();
+  const mark = (messageHid, priority, retrieval = null) => {
     if (!messagesByHid.has(messageHid)) return;
     priorities.set(messageHid, Math.min(priorities.get(messageHid) ?? Infinity, priority));
+    if (retrieval) {
+      const values = retrievals.get(messageHid) ?? [];
+      const key = JSON.stringify(retrieval);
+      if (!values.some((value) => JSON.stringify(value) === key)) values.push(retrieval);
+      retrievals.set(messageHid, values);
+    }
   };
 
   for (const hit of hits) {
     const hitMessage = snapshot.messages.find((message) => message.revision_oid === hit.revision_oid)
       ?? messagesByHid.get(hit.message_hid);
     if (!hitMessage) continue;
-    mark(hitMessage.message_hid, 0);
+    mark(hitMessage.message_hid, 0, compactRetrieval(hit));
     const index = activeIndex.get(hitMessage.message_hid);
     if (index !== undefined) {
       for (let offset = -radius; offset <= radius; offset += 1) {
@@ -56,12 +89,15 @@ function selectedMessages(snapshot, hits, { radius, includeBranches }) {
     }
   }
 
-  return [...priorities].map(([messageHid, priority]) => ({ message: messagesByHid.get(messageHid), priority }))
-    .sort((left, right) => left.priority - right.priority || chronological(left, right));
+  return [...priorities].map(([messageHid, priority]) => ({
+    message: messagesByHid.get(messageHid),
+    priority,
+    retrieval: retrievals.get(messageHid) ?? []
+  })).sort((left, right) => left.priority - right.priority || chronological(left, right));
 }
 
-function messageCost(message, content) {
-  return estimateTokens(`${message.role}\n${message.created_at ?? ""}\n${content}`) + 18;
+function messageCost(message, content, retrieval = []) {
+  return estimateTokens(`${message.role}\n${message.created_at ?? ""}\n${JSON.stringify(retrieval)}\n${content}`) + 18;
 }
 
 export function buildChatContext(db, query, {
@@ -74,6 +110,10 @@ export function buildChatContext(db, query, {
   since = null,
   until = null,
   historical = false,
+  expandTopics = false,
+  topicLimit = 12,
+  topicSeedLimit = 6,
+  topicMinSupport = 1,
   generatedAt = new Date().toISOString()
 } = {}) {
   const tokenBudget = Math.max(128, Math.min(2_000_000, Number(budget) || 12_000));
@@ -85,7 +125,11 @@ export function buildChatContext(db, query, {
     role,
     since,
     until,
-    historical
+    historical,
+    expandTopics,
+    topicLimit,
+    topicSeedLimit,
+    topicMinSupport
   });
 
   const groups = new Map();
@@ -118,7 +162,11 @@ export function buildChatContext(db, query, {
       until: until ?? null,
       historical: Boolean(historical),
       include_branches: Boolean(includeBranches),
-      radius: windowRadius
+      radius: windowRadius,
+      expand_topics: Boolean(expandTopics),
+      topic_limit: Number(topicLimit) || 12,
+      topic_seed_limit: Number(topicSeedLimit) || 6,
+      topic_min_support: Number(topicMinSupport) || 1
     },
     vault_heads: chatIndexHeads(db),
     matches: {
@@ -155,14 +203,14 @@ export function buildChatContext(db, query, {
       if (!message || seenRevisions.has(message.revision_oid)) continue;
       const markdown = messageMarkdown(message.message) || message.content_text || "[empty message]";
       const remaining = tokenBudget - used;
-      const fullCost = messageCost(message, markdown);
+      const fullCost = messageCost(message, markdown, candidate.retrieval);
       if (fullCost <= remaining) {
         chosen.push({ ...candidate, content: markdown, truncated: false, cost: fullCost });
         used += fullCost;
         seenRevisions.add(message.revision_oid);
         continue;
       }
-      const overhead = messageCost(message, "");
+      const overhead = messageCost(message, "", candidate.retrieval);
       const contentBudget = remaining - overhead;
       if (contentBudget >= 32 && candidate.priority === 0) {
         const truncated = truncateToEstimatedTokens(markdown, contentBudget);
@@ -200,6 +248,7 @@ export function buildChatContext(db, query, {
         created_at: message.created_at,
         active: message.active,
         active_position: message.active_position,
+        retrieval: item.retrieval,
         content: item.content,
         truncated: item.truncated
       });
@@ -226,6 +275,18 @@ export function buildChatContext(db, query, {
   return bundle;
 }
 
+function topicRetrievalLine(message) {
+  const retrieval = (message.retrieval ?? []).find((item) => item.direct_topics?.length || item.associated_topics?.length);
+  if (!retrieval) return null;
+  const direct = retrieval.direct_topics.map((topic) => topic.label);
+  const associated = retrieval.associated_topics.map((topic) => topic.label);
+  const parts = [];
+  if (direct.length) parts.push(`direct topics: ${direct.join(", ")}`);
+  if (associated.length) parts.push(`related topics: ${associated.join(", ")}`);
+  if (retrieval.facets?.length) parts.push(`graph facets: ${retrieval.facets.join(", ")}`);
+  return parts.length ? `_Retrieval: ${parts.join(" · ")}_` : null;
+}
+
 export function formatChatContextMarkdown(bundle) {
   const lines = [
     "# Historia Context Bundle",
@@ -247,7 +308,10 @@ export function formatChatContextMarkdown(bundle) {
     lines.push(`_Source ref: \`${conversation.source_ref}\` · archive commit: \`${conversation.commit_oid}\`_`, "");
     for (const message of conversation.messages) {
       const timestamp = message.created_at ? ` · ${message.created_at}` : "";
-      lines.push(`### [${message.citation}] ${displayRole(message.role)}${timestamp}`, "", message.content, "");
+      lines.push(`### [${message.citation}] ${displayRole(message.role)}${timestamp}`, "");
+      const retrievalLine = topicRetrievalLine(message);
+      if (retrievalLine) lines.push(retrievalLine, "");
+      lines.push(message.content, "");
     }
   }
 
