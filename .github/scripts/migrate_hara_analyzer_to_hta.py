@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 
 HARA_REV = "79a289f36ec6528426da88cb9bcc80c504bfd9eb"
@@ -25,27 +24,6 @@ replace(
     "analyzers/hara/build.rs",
     'const HARA_RUNTIME_REV: &str = "65ccb88ff42ec2774f27cc176abbc034ba0ec221";',
     f'const HARA_RUNTIME_REV: &str = "{HARA_REV}";',
-)
-
-replace(
-    "analyzers/hara/build.rs",
-    '''    let artifact = hara_wasm::whole_wasm::compile_artifact(&program)
-        .expect("lower analyzer.hal to hara-rust-full whole-Wasm");
-''',
-    '''    let artifact = hara_wasm::whole_wasm::compile_artifact(&program).unwrap_or_else(|error| {
-        eprintln!("whole-Wasm lowering failed: {error}");
-        for (function_id, function) in program.functions.iter().enumerate().skip(18) {
-            eprintln!(
-                "FUNCTION {function_id} {}",
-                function.name.as_deref().unwrap_or("<entry>")
-            );
-            for (instruction, operation) in function.code.iter().enumerate() {
-                eprintln!("  {instruction:03}: {operation}");
-            }
-        }
-        panic!("lower analyzer.hal to hara-rust-full whole-Wasm: {error}")
-    });
-''',
 )
 
 replace(
@@ -81,28 +59,50 @@ replace(
     'digest.update(b"hara-rust-full:whole-wasm:hta1-boundary-v1");',
 )
 
-# The final #355 compiler specializes a local collection plus literal index as
-# PrimitiveLocalConst. Whole-Wasm intentionally supports ordinary Nth but not
-# that scalar-oriented specialization. Route literal-index reads through the
-# existing typed helper so Nth receives two function parameters instead.
+# #355 uses declared function schemas to choose the whole-Wasm ABI. Reader
+# rows are heterogeneous handles, while root/child vectors contain integer node
+# IDs. Keep generic node-at for handle-valued reads and introduce int-at so Nth
+# results are unboxed before control-flow joins and integer call boundaries.
 analyzer = Path("analyzers/hara/analyzer.hal")
 analyzer_source = analyzer.read_text()
-analyzer_source, literal_reads = re.subn(
-    r"\(nth ([A-Za-z][A-Za-z0-9-]*) ([0-9]+)\)",
-    r"(node-at \1 \2)",
-    analyzer_source,
-)
-if literal_reads != 11:
-    raise SystemExit(
-        f"analyzers/hara/analyzer.hal: expected 11 literal-index nth reads, found {literal_reads}"
-    )
-nested = "(nth (nth definitions index) 0)"
-if analyzer_source.count(nested) != 1:
-    raise SystemExit("analyzers/hara/analyzer.hal: nested definition lookup changed")
-analyzer_source = analyzer_source.replace(
-    nested,
-    "(node-at (node-at definitions index) 0)",
-)
+node_at = '''(defn ^{:schema [:fn [:any :int] :any]}
+  node-at
+  [nodes node-id]
+  (nth nodes node-id))
+'''
+int_at = node_at + '''
+(defn ^{:schema [:fn [:any :int] :int]}
+  int-at
+  [values index]
+  (nth values index))
+'''
+if analyzer_source.count(node_at) != 1:
+    raise SystemExit("analyzers/hara/analyzer.hal: node-at declaration changed")
+analyzer_source = analyzer_source.replace(node_at, int_at)
+
+replacements = [
+    ("(nth children index)", "(int-at children index)", 3),
+    ("(nth children 0)", "(int-at children 0)", 6),
+    ("(nth children 1)", "(int-at children 1)", 2),
+    ("(nth roots index)", "(int-at roots index)", 3),
+    ("(nth clause-children index)", "(int-at clause-children index)", 1),
+    ("(nth clause-children 0)", "(int-at clause-children 0)", 1),
+    ("(nth ns-children index)", "(int-at ns-children index)", 1),
+    ("(nth input 0)", "(node-at input 0)", 1),
+    ("(nth input 1)", "(node-at input 1)", 1),
+    (
+        "(nth (nth definitions index) 0)",
+        "(int-at (node-at definitions index) 0)",
+        1,
+    ),
+]
+for old, new, expected in replacements:
+    found = analyzer_source.count(old)
+    if found != expected:
+        raise SystemExit(
+            f"analyzers/hara/analyzer.hal: expected {expected} occurrence(s) of {old}, found {found}"
+        )
+    analyzer_source = analyzer_source.replace(old, new)
 analyzer.write_text(analyzer_source)
 
 readme = Path("analyzers/hara/README.md")
@@ -121,9 +121,10 @@ remain in the scoped whole-Wasm value arena and are not repeatedly serialized.
 The runtime revision is pinned to the HTTPS-fetchable Hara revision that
 contains #355, so a clean Cargo checkout does not require GitHub SSH credentials.
 
-Literal-index sequence reads are routed through the typed `node-at` helper.
-This avoids the VM's scalar `PrimitiveLocalConst` specialization while keeping
-the analyzer operation as an ordinary whole-Wasm `nth` with identical output.
+The compact reader tree deliberately distinguishes heterogeneous handle-valued
+rows (`node-at`) from integer root and child-ID sequences (`int-at`). Those
+schemas let #355 prove each whole-Wasm call and branch representation without
+unchecked casts or changing analyzer output.
 
 '''
 readme.write_text(text.replace(needle, section + needle))
