@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   migrate-and-verify:
@@ -35,9 +36,26 @@ jobs:
         run: python3 .github/scripts/migrate_hara_analyzer_to_hta.py
 
       - name: Format and test the Hara analyzer
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           cargo fmt --manifest-path analyzers/hara/Cargo.toml
-          cargo test --manifest-path analyzers/hara/Cargo.toml
+          set +e
+          set -o pipefail
+          cargo test --manifest-path analyzers/hara/Cargo.toml 2>&1 | tee /tmp/hara-analyzer-test.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            {
+              echo '<!-- historia-pr55-hta-migration-failure -->'
+              echo '## HTA1 migration compile failure'
+              echo
+              echo '```text'
+              tail -n 220 /tmp/hara-analyzer-test.log
+              echo '```'
+            } > /tmp/pr55-hta-failure.md
+            gh pr comment 55 --repo greenways-ai/historia --body-file /tmp/pr55-hta-failure.md
+            exit "$status"
+          fi
 
       - name: Install Historia dependencies
         run: bun install --frozen-lockfile
