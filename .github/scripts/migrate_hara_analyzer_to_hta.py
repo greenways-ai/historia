@@ -65,6 +65,16 @@ replace(
     'digest.update(b"hara-rust-full:whole-wasm:hta1-boundary-v1");',
 )
 
+# rewrite-clj represents keyword literals as generic token nodes. The existing
+# Babashka structural normalizer therefore reaches its fallback `[:symbol]`
+# branch for keywords. Preserve that observed output exactly rather than the
+# dormant `:keyword` branch in structural.clj.
+replace(
+    "analyzers/hara/src/engine.rs",
+    "        Form::Keyword(_) => 1,\n",
+    "        Form::Keyword(_) => 0,\n",
+)
+
 # #355 uses declared function schemas to choose the whole-Wasm ABI. Reader
 # rows are heterogeneous handles, while root/child vectors contain integer node
 # IDs. Keep generic node-at for handle-valued reads and introduce int-at so Nth
@@ -131,6 +141,10 @@ The compact reader tree deliberately distinguishes heterogeneous handle-valued
 rows (`node-at`) from integer root and child-ID sequences (`int-at`). Those
 schemas let #355 prove each whole-Wasm call and branch representation without
 unchecked casts or changing analyzer output.
+
+Structural keyword tokens follow rewrite-clj's observed generic-token behavior
+and normalize to `[:symbol]`; this preserves the Babashka analyzer's complete
+shape, feature, depth and hash output.
 
 '''
 readme.write_text(text.replace(needle, section + needle))
