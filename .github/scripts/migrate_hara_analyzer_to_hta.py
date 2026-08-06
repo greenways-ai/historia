@@ -1,6 +1,7 @@
+import re
 from pathlib import Path
 
-HARA_REV = "d8f11c05620c194c87d304dc33345de5e50413aa"
+HARA_REV = "79a289f36ec6528426da88cb9bcc80c504bfd9eb"
 
 
 def replace(path: str, old: str, new: str, count: int | None = None) -> None:
@@ -59,6 +60,30 @@ replace(
     'digest.update(b"hara-rust-full:whole-wasm:hta1-boundary-v1");',
 )
 
+# The final #355 compiler specializes a local collection plus literal index as
+# PrimitiveLocalConst. Whole-Wasm intentionally supports ordinary Nth but not
+# that scalar-oriented specialization. Route literal-index reads through the
+# existing typed helper so Nth receives two function parameters instead.
+analyzer = Path("analyzers/hara/analyzer.hal")
+analyzer_source = analyzer.read_text()
+analyzer_source, literal_reads = re.subn(
+    r"\(nth ([A-Za-z][A-Za-z0-9-]*) ([0-9]+)\)",
+    r"(node-at \1 \2)",
+    analyzer_source,
+)
+if literal_reads != 11:
+    raise SystemExit(
+        f"analyzers/hara/analyzer.hal: expected 11 literal-index nth reads, found {literal_reads}"
+    )
+nested = "(nth (nth definitions index) 0)"
+if analyzer_source.count(nested) != 1:
+    raise SystemExit("analyzers/hara/analyzer.hal: nested definition lookup changed")
+analyzer_source = analyzer_source.replace(
+    nested,
+    "(node-at (node-at definitions index) 0)",
+)
+analyzer.write_text(analyzer_source)
+
 readme = Path("analyzers/hara/README.md")
 text = readme.read_text()
 needle = "## Build and run\n"
@@ -74,6 +99,10 @@ remain in the scoped whole-Wasm value arena and are not repeatedly serialized.
 
 The runtime revision is pinned to the HTTPS-fetchable Hara revision that
 contains #355, so a clean Cargo checkout does not require GitHub SSH credentials.
+
+Literal-index sequence reads are routed through the typed `node-at` helper.
+This avoids the VM's scalar `PrimitiveLocalConst` specialization while keeping
+the analyzer operation as an ordinary whole-Wasm `nth` with identical output.
 
 '''
 readme.write_text(text.replace(needle, section + needle))
