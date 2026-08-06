@@ -15,6 +15,7 @@ export const CHATGPT_COMPANION_STATE_PATH = "companion/chatgpt/state.json";
 
 const OID = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/i;
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
+const DEFAULT_COMMIT_RETRIES = 3;
 
 function plainObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -54,6 +55,17 @@ function sourceLabel(value) {
     throw new Error("Historia companion sync source is invalid");
   }
   return output;
+}
+
+function retryCount(value) {
+  if (!Number.isSafeInteger(value) || value < 0 || value > 10) {
+    throw new Error("Historia companion commit retries must be an integer from 0 to 10");
+  }
+  return value;
+}
+
+function refChanged(error) {
+  return error instanceof Error && error.message.startsWith("Historia ref changed:");
 }
 
 function stateRecords(value) {
@@ -125,7 +137,10 @@ export function createCompanionVaultStore({
   ref = CHATGPT_COMPANION_REF,
   now = () => new Date(),
   vaultFactory = (path) => GitVault.init(path),
+  maxCommitRetries = DEFAULT_COMMIT_RETRIES,
 } = {}) {
+  const commitRetries = retryCount(maxCommitRetries);
+
   async function readInternal() {
     const vault = await vaultFactory(vaultPath);
     const head = await vault.resolveRef(ref);
@@ -161,72 +176,92 @@ export function createCompanionVaultStore({
     expectedHead,
     source = "historia-chatgpt-companion",
   } = {}) {
-    const internal = await readInternal();
-    const current = publicSnapshot(internal);
-    const expected = expectedHead === undefined ? current.head : optionalHead(expectedHead);
-    const conflictMerged = expectedHead !== undefined && expected !== current.head;
     const incoming = normalizeCompanionState(stateValue);
-    const state = mergeStable(current.state, incoming);
-    const stateSha256 = companionStateDigest(state);
-    if (stateSha256 === current.state_sha256) {
-      return Object.freeze({
-        ...current,
-        idempotent: true,
-        conflict_merged: conflictMerged,
-        expected_head: expected,
+    const requestedExpected = expectedHead === undefined ? undefined : optionalHead(expectedHead);
+    const syncSource = sourceLabel(source);
+    let raced = false;
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= commitRetries; attempt += 1) {
+      const internal = await readInternal();
+      const current = publicSnapshot(internal);
+      const expected = requestedExpected === undefined ? current.head : requestedExpected;
+      const conflictMerged = raced || (requestedExpected !== undefined && expected !== current.head);
+      const state = mergeStable(current.state, incoming);
+      const stateSha256 = companionStateDigest(state);
+      if (stateSha256 === current.state_sha256) {
+        return Object.freeze({
+          ...current,
+          idempotent: true,
+          conflict_merged: conflictMerged,
+          expected_head: expected,
+          commit_attempts: attempt + 1,
+        });
+      }
+
+      const timestamp = now().toISOString();
+      canonicalTime(timestamp, "Historia companion sync timestamp");
+      const envelope = Object.freeze({
+        $schema: CHATGPT_COMPANION_VAULT_PROTOCOL,
+        updated_at: timestamp,
+        state_sha256: stateSha256,
+        state,
       });
+      const receipt = Object.freeze({
+        $schema: CHATGPT_COMPANION_SYNC_RECEIPT_PROTOCOL,
+        source: syncSource,
+        updated_at: timestamp,
+        previous_commit_oid: current.head,
+        expected_head: expected,
+        conflict_merged: conflictMerged,
+        commit_attempt: attempt + 1,
+        previous_state_sha256: current.state_sha256,
+        state_sha256: stateSha256,
+        state_protocol: COMPANION_STATE_PROTOCOL,
+        counts: {
+          bookmarks: state.bookmarks.length,
+          prompts: state.prompts.length,
+        },
+      });
+      const path = receiptPath(timestamp, stateSha256);
+      const files = new Map([
+        [CHATGPT_COMPANION_STATE_PATH, canonicalJson(envelope)],
+        [path, canonicalJson(receipt)],
+      ]);
+
+      try {
+        const commit = await internal.vault.commitFiles({
+          ref,
+          files,
+          expectedOldOid: current.head,
+          message: `historia(chatgpt): sync companion metadata ${stateSha256.slice(7, 19)}`,
+          authorName: "Historia for ChatGPT",
+          authorEmail: "chatgpt@historia.local",
+          timestamp,
+        });
+        return Object.freeze({
+          ...publicSnapshot({
+            vault: internal.vault,
+            ref,
+            exists: true,
+            head: commit.commitOid,
+            envelope,
+          }),
+          idempotent: false,
+          conflict_merged: conflictMerged,
+          expected_head: expected,
+          previous_head: current.head,
+          receipt_path: path,
+          commit_attempts: attempt + 1,
+        });
+      } catch (error) {
+        lastError = error;
+        if (!refChanged(error) || attempt >= commitRetries) throw error;
+        raced = true;
+      }
     }
 
-    const timestamp = now().toISOString();
-    canonicalTime(timestamp, "Historia companion sync timestamp");
-    const envelope = Object.freeze({
-      $schema: CHATGPT_COMPANION_VAULT_PROTOCOL,
-      updated_at: timestamp,
-      state_sha256: stateSha256,
-      state,
-    });
-    const receipt = Object.freeze({
-      $schema: CHATGPT_COMPANION_SYNC_RECEIPT_PROTOCOL,
-      source: sourceLabel(source),
-      updated_at: timestamp,
-      previous_commit_oid: current.head,
-      expected_head: expected,
-      conflict_merged: conflictMerged,
-      previous_state_sha256: current.state_sha256,
-      state_sha256: stateSha256,
-      state_protocol: COMPANION_STATE_PROTOCOL,
-      counts: {
-        bookmarks: state.bookmarks.length,
-        prompts: state.prompts.length,
-      },
-    });
-    const files = new Map([
-      [CHATGPT_COMPANION_STATE_PATH, canonicalJson(envelope)],
-      [receiptPath(timestamp, stateSha256), canonicalJson(receipt)],
-    ]);
-    const commit = await internal.vault.commitFiles({
-      ref,
-      files,
-      expectedOldOid: current.head,
-      message: `historia(chatgpt): sync companion metadata ${stateSha256.slice(7, 19)}`,
-      authorName: "Historia for ChatGPT",
-      authorEmail: "chatgpt@historia.local",
-      timestamp,
-    });
-    return Object.freeze({
-      ...publicSnapshot({
-        vault: internal.vault,
-        ref,
-        exists: true,
-        head: commit.commitOid,
-        envelope,
-      }),
-      idempotent: false,
-      conflict_merged: conflictMerged,
-      expected_head: expected,
-      previous_head: current.head,
-      receipt_path: receiptPath(timestamp, stateSha256),
-    });
+    throw lastError ?? new Error("Historia companion sync could not commit");
   }
 
   return Object.freeze({ status, pull, push });
