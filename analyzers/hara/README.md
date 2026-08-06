@@ -49,7 +49,9 @@ or feature values. Historia instead smoke-tests that both implementations obey
 the same protocol response shape: required object fields, arrays, nested
 containers, and scalar value types. Empty arrays and nullable scalar fields are
 accepted as schema-compatible; analyzer values and array lengths are not
-compared.
+compared. Content differences remain available for targeted semantic tests, but
+they do not block performance measurements merely because the implementations
+model source forms differently.
 
 ## Build and run
 
