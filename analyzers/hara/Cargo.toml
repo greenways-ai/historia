@@ -11,9 +11,9 @@ name = "historia-hara-analyzer"
 path = "src/main.rs"
 
 [dependencies]
-hara-wasm = { git = "https://github.com/hara-lang/hara", rev = "65ccb88ff42ec2774f27cc176abbc034ba0ec221", default-features = false, features = ["whole-wasm"] }
+hara-wasm = { git = "https://github.com/hara-lang/hara", rev = "9e1286203058e3d77eefab7ad12c203d71dfc67d", default-features = false, features = ["whole-wasm"] }
 serde_json = "1.0"
 sha2 = "0.10"
 
 [build-dependencies]
-hara-wasm = { git = "https://github.com/hara-lang/hara", rev = "65ccb88ff42ec2774f27cc176abbc034ba0ec221", default-features = false, features = ["whole-wasm"] }
+hara-wasm = { git = "https://github.com/hara-lang/hara", rev = "9e1286203058e3d77eefab7ad12c203d71dfc67d", default-features = false, features = ["whole-wasm"] }
