@@ -2,7 +2,6 @@ use crate::shape;
 use hara_wasm::core::Value as HaraValue;
 use hara_wasm::kernel::{read_forms, Form, Span, SpannedForm};
 use hara_wasm::lang::data::Vector as HaraVector;
-use hara_wasm::lang::protocol::IDisplay;
 use hara_wasm::vm::FunctionId;
 use hara_wasm::whole_wasm::NativeModule;
 use serde_json::{json, Map as JsonMap, Value as JsonValue};
@@ -112,14 +111,21 @@ impl AnalyzerEngine {
             ));
         }
 
-        let forms = read_forms(source).map_err(|error| {
-            AnalyzerFailure::new("parse_error", error.to_string())
-        })?;
+        let forms = read_forms(source)
+            .map_err(|error| AnalyzerFailure::new("parse_error", error.to_string()))?;
         let tree = EncodedTree::new(source, &forms);
-        let input = tree.hara_value();
-        let encoded = self
+
+        // HTA1 is the portable boundary between the persistent Historia worker
+        // and the prepared whole-Wasm module. One sequential frame contains all
+        // Hara call arguments; internal analyzer calls remain handle-native.
+        let invocation = vector([tree.hara_value()]);
+        let request_frame = hara_wasm::hta::encode(&invocation)
+            .map_err(|error| AnalyzerFailure::new("internal_error", error))?;
+        let response_frame = self
             .module
-            .call_value(self.analyze_function, &[input])
+            .call_hta(self.analyze_function, &request_frame)
+            .map_err(|error| AnalyzerFailure::new("internal_error", error))?;
+        let encoded = hara_wasm::hta::decode(&response_frame)
             .map_err(|error| AnalyzerFailure::new("internal_error", error))?;
         let output = hara_wasm::kernel::parse(&encoded.display())
             .map_err(|error| AnalyzerFailure::new("internal_error", error.to_string()))?;
@@ -193,7 +199,9 @@ fn vector(values: impl IntoIterator<Item = HaraValue>) -> HaraValue {
 
 fn shape_code(source: &str, value: &SpannedForm) -> i64 {
     match &value.form {
-        Form::Keyword(_) => 1,
+        // rewrite-clj represents keyword literals as generic token nodes, so
+        // the reference structural normalizer reaches its [:symbol] fallback.
+        Form::Keyword(_) => 0,
         Form::String(_) => 2,
         Form::Number(_) | Form::Float(_) | Form::BigInteger(_) | Form::Decimal(_) => 3,
         Form::Nil | Form::Bool(_) => 4,
@@ -246,7 +254,10 @@ fn materialize(
 ) -> Result<JsonValue, String> {
     let output = form_vector(&output)?;
     if output.len() != 4 {
-        return Err(format!("Hara analyzer returned {} fields, expected 4", output.len()));
+        return Err(format!(
+            "Hara analyzer returned {} fields, expected 4",
+            output.len()
+        ));
     }
     let namespace_index = form_number(&output[0])?;
     let namespace = if namespace_index < 0 {
@@ -353,12 +364,22 @@ fn materialize(
         .collect::<Result<Vec<_>, String>>()?;
     references.sort_by(|left, right| {
         let left_key = (
-            left.get("source_symbol_local_id").and_then(JsonValue::as_str).unwrap_or(""),
-            left.get("target_text").and_then(JsonValue::as_str).unwrap_or(""),
+            left.get("source_symbol_local_id")
+                .and_then(JsonValue::as_str)
+                .unwrap_or(""),
+            left.get("target_text")
+                .and_then(JsonValue::as_str)
+                .unwrap_or(""),
         );
         let right_key = (
-            right.get("source_symbol_local_id").and_then(JsonValue::as_str).unwrap_or(""),
-            right.get("target_text").and_then(JsonValue::as_str).unwrap_or(""),
+            right
+                .get("source_symbol_local_id")
+                .and_then(JsonValue::as_str)
+                .unwrap_or(""),
+            right
+                .get("target_text")
+                .and_then(JsonValue::as_str)
+                .unwrap_or(""),
         );
         left_key.cmp(&right_key)
     });
@@ -421,7 +442,10 @@ fn required_string<'a>(
     allow_empty: bool,
 ) -> Result<&'a str, AnalyzerFailure> {
     let value = request.get(key).and_then(JsonValue::as_str).ok_or_else(|| {
-        AnalyzerFailure::new("invalid_request", format!("missing or invalid field: {key}"))
+        AnalyzerFailure::new(
+            "invalid_request",
+            format!("missing or invalid field: {key}"),
+        )
     })?;
     if !allow_empty && value.trim().is_empty() {
         return Err(AnalyzerFailure::new(
@@ -463,7 +487,10 @@ fn normalize_form(source: &str) -> String {
             .strip_suffix('\n')
             .map(|body| (body, "\n"))
             .unwrap_or((line, ""));
-        let body = body.split_once(';').map(|(before, _)| before).unwrap_or(body);
+        let body = body
+            .split_once(';')
+            .map(|(before, _)| before)
+            .unwrap_or(body);
         without_comments.push_str(body);
         without_comments.push_str(newline);
     }
@@ -511,7 +538,7 @@ pub fn analyzer_fingerprint() -> String {
     digest.update(include_bytes!("shape.rs"));
     digest.update(env!("CARGO_PKG_VERSION").as_bytes());
     digest.update(env!("HISTORIA_HARA_RUNTIME_REV").as_bytes());
-    digest.update(b"hara-rust-full:whole-wasm:value-abi-v1");
+    digest.update(b"hara-rust-full:whole-wasm:hta1-boundary-v1");
     format!("{:x}", digest.finalize())
 }
 
