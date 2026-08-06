@@ -53,6 +53,7 @@
     "conformance:python": "bun src/cli.js analyzer check python3 analyzers/python/src/analyzer.py --fixture spec/conformance/python.json",
     "analyzer:parity": "bun benchmarks/clojure-analyzers.js --parity-only",
     "benchmark:clojure-analyzers": "bun benchmarks/clojure-analyzers.js",
+    "benchmark:clojure-analyzer-matrix": "bun benchmarks/clojure-analyzer-matrix.js",
     "benchmark": "bun benchmarks/index.js",
     "benchmark:validate": "bun scripts/validate-large-history.js",
     "fixture:large": "bun benchmarks/generate-history-fast.js",
