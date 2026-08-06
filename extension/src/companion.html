@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="Historia for ChatGPT — local history, prompt handoff, bookmarks, and explicit metadata sync.">
+  <meta name="description" content="Historia for ChatGPT — local history, prompt handoff, bookmarks, native vault search, and explicit metadata sync.">
   <title>Historia for ChatGPT</title>
   <link rel="stylesheet" href="companion.css">
 </head>
@@ -26,12 +26,12 @@
         <div>
           <p class="eyebrow">LOCAL MEMORY · EXPLICIT HANDOFF</p>
           <h1>Keep the conversations.<br><em>Control the context.</em></h1>
-          <p class="hero-copy">Bookmark the chats you choose, prepare reusable prompts, import official ChatGPT exports into Historia, and carry only the context you intend back to the web app.</p>
+          <p class="hero-copy">Bookmark the chats you choose, search your Git-native Historia vault, prepare bounded context, and carry only what you intend back to the ChatGPT web app.</p>
         </div>
         <dl class="summary">
           <div><dt>Bookmarks</dt><dd data-bookmark-count>0</dd></div>
           <div><dt>Prompts</dt><dd data-prompt-count>0</dd></div>
-          <div><dt>Metadata sync</dt><dd data-sync-summary>Off</dd></div>
+          <div><dt>Browser sync</dt><dd data-sync-summary>Off</dd></div>
         </dl>
       </section>
 
@@ -55,16 +55,87 @@
         <section class="panel history-panel" aria-labelledby="history-title">
           <header class="panel-head">
             <div><p>LOCAL HISTORIA VAULT</p><h2 id="history-title">History & context</h2></div>
-            <span class="badge">GIT-NATIVE</span>
+            <span class="badge" data-vault-status>Checking vault…</span>
           </header>
-          <p>Request an official export from ChatGPT under <strong>Settings → Data controls → Export</strong>, then import the ZIP into the local Historia app.</p>
+          <p data-vault-summary>Connect the Historia native host to search and synchronize the local Git vault.</p>
           <div class="action-grid">
-            <button class="action-card" type="button" data-open="import"><strong>Import history</strong><span>Official ZIP or conversation JSON</span></button>
-            <button class="action-card" type="button" data-open="archive"><strong>Search archive</strong><span>Messages, branches, revisions and provenance</span></button>
-            <button class="action-card" type="button" data-open="context"><strong>Build context</strong><span>Bounded packages for your next task</span></button>
+            <button class="action-card" type="button" data-open="archive"><strong>Open archive</strong><span>Browse messages, branches and provenance</span></button>
+            <button class="action-card" type="button" data-open="context"><strong>Open context lab</strong><span>Use the full local Historia interface</span></button>
             <button class="action-card" type="button" data-open="ledger"><strong>Inspect ledger</strong><span>Import commits, source refs and receipts</span></button>
+            <button class="action-card" type="button" data-vault-refresh><strong>Refresh provider</strong><span>Reindex and verify local state</span></button>
           </div>
           <p class="fineprint">The extension never attempts to recreate or modify ChatGPT's own sidebar. The Historia archive is a separate local record.</p>
+        </section>
+
+        <section class="panel panel--wide native-search-panel" aria-labelledby="native-search-title">
+          <header class="panel-head">
+            <div><p>VAULT SEARCH</p><h2 id="native-search-title">Find prior work</h2></div>
+            <span class="badge" data-history-result-count>0 results</span>
+          </header>
+          <form class="provider-form provider-form--search" data-history-search-form>
+            <label>Search the local archive<input name="query" maxlength="4096" required placeholder="Hestia key recovery, HAL workspaces, campaign receipts…"></label>
+            <label>Limit<input name="limit" type="number" min="1" max="50" value="20"></label>
+            <label class="check-row"><input name="historical" type="checkbox"><span>Include superseded revisions</span></label>
+            <label class="check-row"><input name="expandTopics" type="checkbox"><span>Expand through topic graph</span></label>
+            <button class="button button--primary" type="submit">Search Historia</button>
+          </form>
+          <div class="record-list history-results" data-history-results>
+            <div class="empty">Search operates on the rebuildable SQLite projection and returns Git commit provenance for every result.</div>
+          </div>
+        </section>
+
+        <section class="panel panel--wide context-builder-panel" data-context-panel aria-labelledby="context-builder-title">
+          <header class="panel-head">
+            <div><p>BOUNDED RETRIEVAL</p><h2 id="context-builder-title">Build context for ChatGPT</h2></div>
+            <span class="badge" data-context-summary>No bundle yet</span>
+          </header>
+          <form class="provider-form provider-form--context" data-context-form>
+            <label class="provider-form__query">Task or question<input name="query" data-context-query maxlength="4096" required placeholder="Summarise the decisions around Greenways OS capability grants"></label>
+            <label>Token budget<input name="budget" type="number" min="128" max="40000" value="12000"></label>
+            <label>Conversations<input name="maxConversations" type="number" min="1" max="12" value="8"></label>
+            <label>Message radius<input name="radius" type="number" min="0" max="6" value="2"></label>
+            <label class="check-row"><input name="includeBranches" type="checkbox"><span>Include nearby branches</span></label>
+            <label class="check-row"><input name="expandTopics" type="checkbox"><span>Use topic expansion</span></label>
+            <button class="button button--primary" type="submit">Build context</button>
+          </form>
+          <label>Generated Markdown<textarea data-context-output rows="16" readonly placeholder="The bounded context bundle will appear here with message and Git provenance citations."></textarea></label>
+          <div class="actions">
+            <button class="button" type="button" data-context-copy>Copy context</button>
+            <button class="button button--primary" type="button" data-context-open>Copy & open ChatGPT</button>
+          </div>
+          <p class="fineprint">Historia retrieves from the local index, retains source-ref and commit provenance, and never submits the generated prompt. You paste and review it yourself.</p>
+        </section>
+
+        <section class="panel vault-sync-panel" aria-labelledby="vault-sync-title">
+          <header class="panel-head">
+            <div><p>GIT VAULT METADATA</p><h2 id="vault-sync-title">Durable companion sync</h2></div>
+            <span class="badge">EXPLICIT</span>
+          </header>
+          <dl class="provider-summary">
+            <div><dt>Vault head</dt><dd><code data-vault-head>—</code></dd></div>
+            <div><dt>State digest</dt><dd><code data-vault-digest>—</code></dd></div>
+            <div><dt>Records</dt><dd data-vault-metadata-counts>No vault metadata state yet</dd></div>
+          </dl>
+          <div class="actions">
+            <button class="button" type="button" data-native-sync-pull>Pull from vault</button>
+            <button class="button" type="button" data-native-sync-push>Push to vault</button>
+            <button class="button button--primary" type="button" data-native-sync-now>Sync now</button>
+          </div>
+          <p class="fineprint">The Git ref is the durable metadata source. Push uses the last observed head and deterministically merges bookmarks, prompts and tombstones when another device has advanced it.</p>
+        </section>
+
+        <section class="panel import-panel" aria-labelledby="import-title">
+          <header class="panel-head">
+            <div><p>OFFICIAL EXPORT</p><h2 id="import-title">Import ChatGPT history</h2></div>
+            <span class="badge">LOCAL PATH</span>
+          </header>
+          <form class="prompt-form" data-native-import-form>
+            <label>Export ZIP, directory or conversations.json path<input name="inputPath" maxlength="4096" required placeholder="/Users/you/Downloads/chatgpt-export.zip"></label>
+            <label>Source key override<input name="sourceKey" maxlength="240" placeholder="Leave empty for automatic identity"></label>
+            <label class="check-row"><input name="includeRawFiles" type="checkbox" checked><span>Retain raw export files in the Git vault</span></label>
+            <button class="button button--primary" type="submit">Import and index</button>
+          </form>
+          <p class="fineprint">Browsers do not reveal a selected file's absolute path. Enter a path on the same computer as the Historia native host, or use the standalone <code>historia chat import-openai</code> command.</p>
         </section>
 
         <section class="panel bookmarks-panel" aria-labelledby="bookmarks-title">
@@ -91,7 +162,7 @@
 
         <section class="panel sync-panel" aria-labelledby="sync-title">
           <header class="panel-head">
-            <div><p>PORTABLE METADATA</p><h2 id="sync-title">Sync & backup</h2></div>
+            <div><p>BROWSER PROFILE CACHE</p><h2 id="sync-title">Browser metadata sync</h2></div>
             <span class="badge">OPT-IN</span>
           </header>
           <label class="toggle-row">
@@ -102,7 +173,7 @@
             <button class="button" type="button" data-export-sync>Download sync bundle</button>
             <label class="button file-button">Import sync bundle<input type="file" accept="application/json,.json" data-import-sync></label>
           </div>
-          <p class="fineprint">Portable bundles use <code>historia.chatgpt.sync/1</code>, retain tombstones, and merge by record update time. Vault publication or Git remote sync remains a separate explicit Historia operation.</p>
+          <p class="fineprint">Browser profile sync is a small convenience projection. The explicit Git-vault sync above is the durable local history.</p>
         </section>
 
         <section class="panel policy-panel" aria-labelledby="policy-title">
@@ -111,7 +182,7 @@
             <li>It does not scrape or automatically extract ChatGPT conversations.</li>
             <li>It does not read account cookies, session tokens, local storage, or undocumented APIs.</li>
             <li>It does not insert or send prompts without a deliberate copy-and-paste action.</li>
-            <li>It does not claim that importing an export recreates ChatGPT's native history.</li>
+            <li>It does not treat a browser cache as the authoritative Historia archive.</li>
           </ul>
           <p><a href="privacy.html">Read the complete local data and sync disclosure</a></p>
         </section>
@@ -122,5 +193,6 @@
     <div class="toast" role="status" aria-live="polite" hidden data-toast></div>
   </div>
   <script type="module" src="companion.js"></script>
+  <script type="module" src="native-provider.js"></script>
 </body>
 </html>
