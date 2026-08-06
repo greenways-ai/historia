@@ -26,13 +26,14 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Replace the Java analyzer with the .hal implementation
+      - name: Install the .hal analyzer source
         if: steps.ready.outputs.ready == 'true'
         run: |
           cat .bootstrap/part-* | base64 --decode > /tmp/historia-hara-upload.tgz
           gzip -t /tmp/historia-hara-upload.tgz
           tar -xzf /tmp/historia-hara-upload.tgz -C .
-          rm -rf .bootstrap .github/workflows/bootstrap-hara-redo.yml
+          rm -f .github/workflows/hara-analyzer.yml
+          rm -rf .bootstrap
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
