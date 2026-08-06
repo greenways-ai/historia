@@ -36,6 +36,13 @@ jobs:
       - name: Check Historia analyzer protocol conformance
         run: bun run conformance:hara
 
+      - name: Smoke-test exact parity on the fixed fixtures
+        run: |
+          bun benchmarks/clojure-analyzers.js \
+            --parity-only \
+            --files 0 \
+            --definitions 0
+
       - name: Require identical Babashka and Hara outputs
         run: bun run analyzer:parity
 
