@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+BINARY="$ROOT/target/release/historia-hara-analyzer"
+
+if [ ! -x "$BINARY" ] || [ "$ROOT/analyzer.hal" -nt "$BINARY" ]; then
+  cargo build --quiet --release --manifest-path "$ROOT/Cargo.toml"
+fi
+
+exec "$BINARY" "$@"

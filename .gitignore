@@ -7,3 +7,5 @@ node_modules/
 /site/.astro/
 /site/.netlify/
 /.netlify/
+/analyzers/hara/target/
+/target/

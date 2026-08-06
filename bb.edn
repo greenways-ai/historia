@@ -1,7 +1,18 @@
 {:deps {rewrite-clj/rewrite-clj {:mvn/version "1.2.55"}}
  :tasks
- {analyzer {:doc "Run the Clojure analyzer worker"
+ {analyzer {:doc "Run the existing Babashka + rewrite-clj analyzer worker"
             :task (shell "bb -cp analyzers/clojure/src -m greenways-historian.analyzer")}
+  analyzer:hara:build {:doc "Build the .hal analyzer on hara-rust-full"
+                       :task (shell "cargo build --release --manifest-path analyzers/hara/Cargo.toml")}
+  analyzer:hara {:doc "Run the .hal analyzer on hara-rust-full"
+                 :depends [analyzer:hara:build]
+                 :task (shell "analyzers/hara/target/release/historia-hara-analyzer")}
+  analyzer:parity {:doc "Require byte-for-byte equivalent Babashka and Hara analysis JSON"
+                   :depends [analyzer:hara:build]
+                   :task (shell "bun benchmarks/clojure-analyzers.js --parity-only")}
+  analyzer:benchmark {:doc "Benchmark persistent Babashka and hara-rust-full workers after exact parity"
+                      :depends [analyzer:hara:build]
+                      :task (shell "bun benchmarks/clojure-analyzers.js")}
   analyzer:kondo {:doc "Run the clj-kondo-backed Clojure analyzer worker"
                   :task (shell "bb -cp analyzers/clojure/src -m greenways-historian.kondo-analyzer")}
   analyzer:kondo:test {:doc "Run clj-kondo analyzer normalization tests"
@@ -10,5 +21,5 @@
                 :task (shell "bb -cp analyzers/clojure/src -m greenways-historian.kondo-ingest")}
   ingest {:doc "Ingest ../foundation-base/src through clj-kondo"
           :task (shell "bb -cp analyzers/clojure/src -m greenways-historian.kondo-ingest")}
-  analyzer:test {:doc "Test the Clojure analyzer"
+  analyzer:test {:doc "Test the existing Babashka analyzer"
                  :task (shell "bb -cp analyzers/clojure/src:analyzers/clojure/test analyzers/clojure/test/greenways_historian/analyzer_test.clj")}}}
