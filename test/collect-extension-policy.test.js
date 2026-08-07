@@ -42,12 +42,14 @@ describe("Historia for ChatGPT extension privacy policy", () => {
 
   test("makes metadata-only storage, official export import, and sync opt-in visible", () => {
     for (const page of [popup, options, privacy]) {
-      expect(page.toLowerCase()).toContain("metadata");
       expect(page.toLowerCase()).toContain("chatgpt");
     }
-    expect(popup).toContain("No message content is read");
+    expect(popup).toContain("normalized ChatGPT URL and title");
+    expect(popup).toContain("No page content is read");
+    expect(options).toContain("Metadata only");
     expect(options).toContain("disabled by default");
-    expect(options).toContain("official ChatGPT data export");
+    expect(options).toContain("official data export");
+    expect(privacy).toContain("Browser metadata sync");
     expect(privacy).toContain("does not scrape ChatGPT conversations");
     expect(privacy).toContain("does not run a content script");
   });
@@ -65,8 +67,12 @@ describe("Historia for ChatGPT extension privacy policy", () => {
     ]) {
       expect(privacy.toLowerCase()).toContain(text.toLowerCase());
     }
+    const categories = manifest.browser_specific_settings.gecko.data_collection_permissions.required;
     expect(privacy).toContain("browsingActivity");
-    expect(privacy).not.toContain("personalCommunications");
-    expect(privacy).not.toContain("websiteContent");
+    expect(privacy).toContain("does not request");
+    for (const excludedCategory of ["personalCommunications", "websiteContent"]) {
+      expect(categories).not.toContain(excludedCategory);
+      expect(privacy).toContain(excludedCategory);
+    }
   });
 });
