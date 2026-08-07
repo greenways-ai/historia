@@ -61,7 +61,14 @@ export default defineConfig({
         ]}
       ],
       head: [
-        { tag: "meta", attrs: { property: "og:image", content: "https://opensource.greenways.ai/historia/images/historian-raven-day.webp" } },
+        { tag: "meta", attrs: { property: "og:image", content: "https://oss.greenways.ai/visual-language/assets/og-historia.jpg" } },
+        { tag: "meta", attrs: { property: "og:image:secure_url", content: "https://oss.greenways.ai/visual-language/assets/og-historia.jpg" } },
+        { tag: "meta", attrs: { property: "og:image:type", content: "image/jpeg" } },
+        { tag: "meta", attrs: { property: "og:image:width", content: "1200" } },
+        { tag: "meta", attrs: { property: "og:image:height", content: "630" } },
+        { tag: "meta", attrs: { property: "og:image:alt", content: "Historia's raven sigil over the illuminated archive" } },
+        { tag: "meta", attrs: { name: "twitter:image", content: "https://oss.greenways.ai/visual-language/assets/og-historia.jpg" } },
+        { tag: "meta", attrs: { name: "twitter:image:alt", content: "Historia's raven sigil over the illuminated archive" } },
         { tag: "meta", attrs: { name: "twitter:card", content: "summary_large_image" } }
       ]
     }),
