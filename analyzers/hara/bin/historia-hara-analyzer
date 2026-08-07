@@ -11,7 +11,7 @@ if [ -z "$RUNTIME" ]; then
   RUNTIME=$(command -v hara-rust-full || true)
 fi
 if [ -z "$RUNTIME" ]; then
-  RUNTIME=$("$ROOT/bin/build-hara-rust-full")
+  RUNTIME=$(sh "$ROOT/bin/build-hara-rust-full")
 fi
 
 exec "$RUNTIME" analyzer "$ROOT/analyzer.hal"
