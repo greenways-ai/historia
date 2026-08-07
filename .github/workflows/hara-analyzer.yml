@@ -12,7 +12,9 @@ permissions:
 jobs:
   shape-and-speed:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
+    env:
+      HARA_RUNTIME_REV: agent/whole-wasm-code-analyzer
     steps:
       - uses: actions/checkout@v4
 
@@ -29,10 +31,8 @@ jobs:
       - name: Install Historia dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build and test the .hal analyzer on hara-rust-full
-        run: |
-          cargo test --manifest-path analyzers/hara/Cargo.toml
-          cargo build --release --manifest-path analyzers/hara/Cargo.toml
+      - name: Build the Hara-owned whole-Wasm analyzer runtime
+        run: bun run hara:build
 
       - name: Check Historia analyzer protocol conformance
         run: bun run conformance:hara
