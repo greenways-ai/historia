@@ -21,7 +21,9 @@ requireMeta("property", "og:image:height", "630");
 requireMeta("name", "twitter:image", image);
 
 for (const retired of ["opensource.greenways.ai", "historian-raven-day.webp"]) {
-  if (html.includes(retired)) throw new Error(`Historia still advertises retired preview metadata: ${retired}`);
+  if (metaTags.some((tag) => tag.includes(retired))) {
+    throw new Error(`Historia still advertises retired preview metadata: ${retired}`);
+  }
 }
 
 console.log("verified Historia social-preview metadata");
