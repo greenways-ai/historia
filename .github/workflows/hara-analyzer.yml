@@ -34,17 +34,19 @@ jobs:
       - name: Build the Hara-owned whole-Wasm analyzer runtime
         run: bun run hara:build
 
-      - name: Smoke-test analyzer process startup
+      - name: Smoke-test analyzer startup and first analysis
         shell: bash
         run: |
           mkdir -p target
           {
             printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-describe","op":"describe"}'
+            printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-analyze","op":"analyze","language":"clojure","path":"smoke.clj","blob_oid":"smoke","source":"(ns smoke)\n(defn answer [x] (+ x 1))"}'
             printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-shutdown","op":"shutdown"}'
           } | analyzers/hara/bin/historia-hara-analyzer \
             > >(tee target/hara-startup.stdout) \
             2> >(tee target/hara-startup.stderr >&2)
           grep -q '"request_id":"startup-describe"' target/hara-startup.stdout
+          grep -q '"request_id":"startup-analyze"' target/hara-startup.stdout
           grep -q '"request_id":"startup-shutdown"' target/hara-startup.stdout
 
       - name: Check Historia analyzer protocol conformance
