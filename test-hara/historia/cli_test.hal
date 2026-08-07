@@ -1,0 +1,25 @@
+(ns historia.cli-test
+  (:require [historia.cli :as cli]
+            [std.lib.test :as test]))
+
+(test/print-results
+ [(test/check
+   "no arguments show help"
+   (:action (cli/parse []))
+   :help)
+  (test/check
+   "version is a Hara command"
+   (:action (cli/parse ["--version"]))
+   :version)
+  (test/check
+   "vault init carries its explicit path"
+   (cli/parse ["vault" "init" "--vault" "/tmp/historia.git"])
+   {:action :vault-init :vault "/tmp/historia.git"})
+  (test/check
+   "equals-form vault options are accepted"
+   (cli/parse ["vault" "verify" "--vault=/tmp/historia.git"])
+   {:action :vault-verify :vault "/tmp/historia.git"})
+  (test/check
+   "unknown commands remain data"
+   (:action (cli/parse ["unknown"]))
+   :error)])
