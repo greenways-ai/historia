@@ -1,0 +1,42 @@
+(ns historia.main
+  (:require [hara.cli.application :as application]
+            [historia.cli :as cli]
+            [historia.path :as path]
+            [historia.vault :as vault]
+            [std.foundation.json :as json]
+            [std.foundation.string :as string]))
+
+(defn- result
+  [stdout stderr exit]
+  {:hara.app/stdout stdout
+   :hara.app/stderr stderr
+   :hara.app/exit exit})
+
+(defn- line
+  [value]
+  (string/join "" [value "\n"]))
+
+(defn- json-result
+  [value]
+  (result (line (json/write value)) "" 0))
+
+(defn main
+  [request]
+  (let [parsed (cli/parse (get request :hara.cli/arguments))
+        action (get parsed :action)]
+    (if (= action :help)
+      (result cli/usage "" 0)
+      (if (= action :version)
+        (result (line cli/version) "" 0)
+        (if (= action :vault-init)
+          (json-result (vault/init (get parsed :vault)))
+          (if (= action :vault-verify)
+            (json-result (vault/verify (get parsed :vault)))
+            (result
+             ""
+             (string/join
+              ""
+              ["historia: " (get parsed :message) "\n\n" cli/usage])
+             2)))))))
+
+(main application/request)

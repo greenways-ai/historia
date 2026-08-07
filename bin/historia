@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+RUNTIME=${HARA_APP:-}
+
+if [ -z "$RUNTIME" ] && [ -x "$ROOT/target/bin/hara-app" ]; then
+  RUNTIME="$ROOT/target/bin/hara-app"
+fi
+if [ -z "$RUNTIME" ]; then
+  RUNTIME=$(command -v hara-app || true)
+fi
+if [ -z "$RUNTIME" ]; then
+  RUNTIME=$(sh "$ROOT/bin/build-hara-app")
+fi
+
+exec "$RUNTIME" --project "$ROOT" --allow-process -- "$@"

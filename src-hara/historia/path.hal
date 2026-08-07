@@ -1,0 +1,54 @@
+(ns historia.path
+  (:require [std.foundation.file :as file]
+            [std.foundation.os :as os]
+            [std.foundation.string :as string]))
+
+(defn- join
+  [left right]
+  (string/join "" [left right]))
+
+(defn home-directory
+  []
+  (or (os/getenv "HOME")
+      (os/getenv "USERPROFILE")
+      (os/cwd)))
+
+(defn absolute?
+  [path]
+  (if (or (string/starts-with? path "/")
+          (string/starts-with? path "\\\\")
+          (and (< 1 (string/length path))
+               (= ":" (string/slice path 1 2))))
+    true
+    false))
+
+(defn resolve-input
+  [path]
+  (if (absolute? path)
+    path
+    (file/resolve (os/cwd) path)))
+
+(defn default-vault-path
+  []
+  (let [override (os/getenv "HISTORIA_VAULT")]
+    (if override
+      (resolve-input override)
+      (let [home (home-directory)
+            platform (os/platform)]
+        (if (= platform :macos)
+          (join home "/Library/Application Support/Historia/vault.git")
+          (if (= platform :windows)
+            (join
+             (or (os/getenv "LOCALAPPDATA")
+                 (join home "\\AppData\\Local"))
+             "\\Historia\\vault.git")
+            (join
+             (or (os/getenv "XDG_DATA_HOME")
+                 (join home "/.local/share"))
+             "/historia/vault.git")))))))
+
+(defn vault-path
+  [provided]
+  (if provided
+    (resolve-input provided)
+    (default-vault-path)))

@@ -1,0 +1,56 @@
+(ns historia.cli
+  (:require [std.foundation.string :as string]))
+
+(def version "0.1.0")
+
+(def usage
+  "Historia 0.1.0\n\nGit-native private history for conversations and agent context.\n\nUsage:\n  historia vault init [--vault <path>]\n  historia vault verify [--vault <path>]\n\n  historia --version\n\nEnvironment:\n  HISTORIA_VAULT     Override the default bare Git vault path.\n")
+
+(defn- error
+  [message]
+  {:action :error
+   :message message})
+
+(defn- parse-vault-options
+  [arguments index options]
+  (if (< index (count arguments))
+    (let [argument (nth arguments index)]
+      (if (= argument "--vault")
+        (if (< (+ index 1) (count arguments))
+          (parse-vault-options
+           arguments
+           (+ index 2)
+           (assoc options :vault (nth arguments (+ index 1))))
+          (error "--vault requires a path"))
+        (if (string/starts-with? argument "--vault=")
+          (let [value (string/slice argument 8)]
+            (if (string/blank? value)
+              (error "--vault requires a path")
+              (parse-vault-options
+               arguments
+               (+ index 1)
+               (assoc options :vault value))))
+          (if (or (= argument "--help") (= argument "-h"))
+            {:action :help}
+            (error (string/join "" ["unknown option: " argument]))))))
+    options))
+
+(defn parse
+  [arguments]
+  (if (= 0 (count arguments))
+    {:action :help}
+    (let [domain (nth arguments 0)]
+      (if (or (= domain "--help") (= domain "-h") (= domain "help"))
+        {:action :help}
+        (if (or (= domain "--version") (= domain "-V"))
+          {:action :version}
+          (if (= domain "vault")
+            (if (< 1 (count arguments))
+              (let [command (nth arguments 1)]
+                (if (= command "init")
+                  (parse-vault-options arguments 2 {:action :vault-init})
+                  (if (= command "verify")
+                    (parse-vault-options arguments 2 {:action :vault-verify})
+                    (error (string/join "" ["unknown vault command: " command])))))
+              (error "vault requires init or verify"))
+            (error (string/join "" ["unknown command: " domain]))))))))

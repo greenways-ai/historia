@@ -1,0 +1,57 @@
+name: Hara application
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hara-only-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HARA_APPLICATION_REV: 52a015ecea0d8d5a2de35323095ae48b7a0eb594
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build the Hara application runtime
+        run: sh bin/build-hara-app
+
+      - name: Test the generic Hara application boundary
+        run: |
+          CARGO_TARGET_DIR=target/hara-build cargo test \
+            --manifest-path target/hara-runtime/core/rust/Cargo.toml \
+            --bin hara-app
+
+      - name: Run Historia Hara tests
+        run: target/bin/hara --project . test
+
+      - name: Exercise help and version without Bun
+        run: |
+          mkdir -p target/hara-application
+          bin/historia --help | tee target/hara-application/help.txt
+          bin/historia --version | tee target/hara-application/version.txt
+          grep -q 'Historia 0.1.0' target/hara-application/help.txt
+          grep -q '^0.1.0$' target/hara-application/version.txt
+
+      - name: Initialize and verify a real Git vault without Bun
+        run: |
+          vault="$RUNNER_TEMP/historia-hara/vault.git"
+          bin/historia vault init --vault "$vault" | tee target/hara-application/vault-init.json
+          bin/historia vault verify --vault "$vault" | tee target/hara-application/vault-verify.json
+          grep -q '"objectFormat"' target/hara-application/vault-init.json
+          grep -q '"ok":true' target/hara-application/vault-verify.json
+          test "$(git --git-dir "$vault" rev-parse --is-bare-repository)" = true
+
+      - name: Upload Hara application evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historia-hara-application
+          path: target/hara-application
+          if-no-files-found: ignore
