@@ -1,39 +1,66 @@
 # Historia analyzer for `hara-rust-full`
 
-This is Historia's second Clojure/Babashka analyzer backend. The existing
-Babashka + `rewrite-clj` worker in `../clojure` remains available and unchanged.
+Historia remains a **Bun/JavaScript application with SQLite storage**. This
+directory contains an optional Clojure/Babashka analyzer module; it does not
+turn Historia into a Rust application.
 
-The analyzer logic is authored in [`analyzer.hal`](analyzer.hal). During the
-Rust build, that source is compiled to Hara bytecode and then lowered through
-Hara's whole-function Wasm tier—the runtime identified by the Hara benchmark
-suite as **`hara-rust-full`**. The resulting whole-Wasm artifact is embedded in
-a small persistent JSONL host.
+The existing Babashka + `rewrite-clj` worker in `../clojure` remains available
+and unchanged. Historia's alternative analyzer policy is authored entirely in
+[`analyzer.hal`](analyzer.hal):
 
-The host is intentionally limited to the protocol boundary and source facts
-that the `.hal` program cannot obtain by executing user code:
+- `describe` declares protocol metadata and capabilities;
+- `analyze` performs namespace and import discovery, definition
+  classification, call extraction, and structural shaping.
 
-- JSONL framing and strict JSON encoding;
-- Hara's non-evaluating, spanned reader;
-- exact UTF-8 source slicing and SHA-256;
-- conversion between protocol JSON and Hara values.
+Reusable runtime machinery belongs to `hara-lang/hara`, which provides the
+`hara-rust-full analyzer MODULE.hal` command. Hara owns:
 
-Namespace discovery, import discovery, definition classification, call
-extraction, and structural shape generation execute in `analyzer.hal` through
-`hara-rust-full`.
+- persistent JSONL protocol framing;
+- its non-evaluating spanned reader;
+- preparation of the `.hal` module as whole-function Wasm;
+- source ranges, UTF-16 display columns, source hashes, and result
+  materialization;
+- optional phase timing through `HARA_ANALYZER_PROFILE=1`.
 
-## Portable HTA1 boundary
+Historia no longer carries a Cargo crate, `build.rs`, or application-specific
+Rust analyzer host.
 
-The persistent host invokes the compiled `analyze` function through
-`NativeModule::call_hta`, introduced by `hara-lang/hara#355`. It encodes one
-sequential HTA1 argument frame, enters the prepared whole-Wasm module, and
-decodes one HTA1 result frame. Calls between functions inside `analyzer.hal`
-remain in the scoped whole-Wasm value arena and are not repeatedly serialized.
+## Direct in-process value boundary
 
-The Hara dependency is pinned to the HTTPS-fetchable merged revision containing
-#355. The compact reader tree deliberately distinguishes heterogeneous
-handle-valued rows (`node-at`) from integer root and child-ID sequences
-(`int-at`). Those schemas let whole-Wasm prove each call and branch
-representation without unchecked casts or changes to the analyzer protocol.
+For a local persistent worker, the Hara host and prepared whole-Wasm module are
+already in the same process. The hot path therefore calls
+`NativeModule::call_value` directly:
+
+```text
+Historia JSONL request
+        │
+Hara spanned reader
+        │
+compact Hara value tree: [nodes roots]
+        │
+direct whole-Wasm value call
+        │
+analyzer.hal
+        │
+direct Hara value result
+        │
+Historia protocol JSON
+```
+
+It deliberately avoids the previous same-process sequence:
+
+```text
+HTA encode → HTA decode → whole-Wasm → HTA encode → HTA decode
+→ value display → source reparse
+```
+
+HTA1 remains the portable cross-process value format in Hara, but it is not
+needed for this in-process analyzer call.
+
+The Hara host also avoids retaining cloned reader `Form` trees, does not render
+collection subtrees merely to intern tokens, uses parser child spans for exact
+selection ranges, indexes line starts once per source file, and computes
+structural summaries in one pass.
 
 ## Structural semantics
 
@@ -44,39 +71,45 @@ Babashka/rewrite-clj implementation. In particular:
 - string literals retain their kind as `[:string]`;
 - symbols remain `[:symbol]`.
 
-The two analyzers therefore do not have to produce identical structural hashes
-or feature values. Historia instead smoke-tests that both implementations obey
-the same protocol response shape: required object fields, arrays, nested
-containers, and scalar value types. Empty arrays and nullable scalar fields are
-accepted as schema-compatible; analyzer values and array lengths are not
-compared. Content differences remain available for targeted semantic tests, but
-they do not block performance measurements merely because the implementations
-model source forms differently.
+The smoke gate compares protocol response shape—required fields, nested
+containers, and JSON scalar types—not analyzer values or hashes. Targeted Hara
+semantic tests remain responsible for the richer literal distinctions.
 
 ## Build and run
 
+Build the Hara-owned runtime and install the compatibility launcher:
+
 ```sh
-cargo build --release --manifest-path analyzers/hara/Cargo.toml
-./analyzers/hara/target/release/historia-hara-analyzer
+bun run hara:build
 ```
 
-Or use the launcher, which builds the release binary when needed:
+Run the Historia analyzer:
 
 ```sh
 analyzers/hara/bin/historia-hara-analyzer
 ```
 
+An already installed runtime can be selected explicitly:
+
+```sh
+HARA_RUST_FULL=/path/to/hara-rust-full \
+  analyzers/hara/bin/historia-hara-analyzer
+```
+
+The underlying invocation is:
+
+```sh
+hara-rust-full analyzer analyzers/hara/analyzer.hal
+```
+
 ## Verification
 
 ```sh
-cargo test --manifest-path analyzers/hara/Cargo.toml
-bun run conformance:hara
-bun run analyzer:shape
+bun run hara:test
 bun run benchmark:clojure-analyzers
 bun run benchmark:clojure-analyzer-matrix
 ```
 
-`analyzer:shape` checks `describe`, `ping`, and the fixed Clojure/Babashka
-analysis fixtures. The benchmark matrix runs only after that response-shape
-smoke test passes, while allowing each analyzer to retain its own semantically
-correct structural content.
+`hara:test` builds the generic Hara runtime, checks Historia analyzer-protocol
+conformance, and runs the fixed response-shape smoke fixtures. The benchmark
+matrix runs only after the same shape contract passes.

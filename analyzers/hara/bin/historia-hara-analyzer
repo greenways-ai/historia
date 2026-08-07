@@ -2,10 +2,16 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-BINARY="$ROOT/target/release/historia-hara-analyzer"
+RUNTIME=${HARA_RUST_FULL:-}
 
-if [ ! -x "$BINARY" ] || [ "$ROOT/analyzer.hal" -nt "$BINARY" ]; then
-  cargo build --quiet --release --manifest-path "$ROOT/Cargo.toml"
+if [ -z "$RUNTIME" ] && [ -x "$ROOT/target/bin/hara-rust-full" ]; then
+  RUNTIME="$ROOT/target/bin/hara-rust-full"
+fi
+if [ -z "$RUNTIME" ]; then
+  RUNTIME=$(command -v hara-rust-full || true)
+fi
+if [ -z "$RUNTIME" ]; then
+  RUNTIME=$(sh "$ROOT/bin/build-hara-rust-full")
 fi
 
-exec "$BINARY" "$@"
+exec "$RUNTIME" analyzer "$ROOT/analyzer.hal"

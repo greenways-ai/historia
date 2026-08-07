@@ -1,6 +1,6 @@
 ;; Historia's Hara-side Clojure/Babashka analyzer.
 ;;
-;; The Rust boundary supplies only a compact, non-evaluated Hara reader tree:
+;; The Hara runtime supplies a compact, non-evaluated reader tree:
 ;;   [nodes roots]
 ;; where every node is [shape-code token-id children]. Token IDs 0..45 are the
 ;; stable analyzer vocabulary documented below; source-specific tokens follow.
@@ -20,6 +20,16 @@
 ;;   9 deftype       21 when-not    33 new        45 :require
 ;;  10 deftest       22 cond        34 .
 ;;  11 ns            23 condp       35 ..
+
+(defn ^{:schema [:fn [] :any]}
+  describe
+  []
+  ["greenways-historian-hara-rust-full"
+   "0.1.0"
+   ["clojure" "babashka"]
+   [".clj" ".bb"]
+   ["symbols" "calls" "structural_hashes" "structural_features" "partial_parse"]
+   10485760])
 
 (defn ^{:schema [:fn [:any :any] :any]}
   append

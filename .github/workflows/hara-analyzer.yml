@@ -12,7 +12,9 @@ permissions:
 jobs:
   shape-and-speed:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
+    env:
+      HARA_RUNTIME_REV: agent/whole-wasm-code-analyzer
     steps:
       - uses: actions/checkout@v4
 
@@ -29,10 +31,23 @@ jobs:
       - name: Install Historia dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build and test the .hal analyzer on hara-rust-full
+      - name: Build the Hara-owned whole-Wasm analyzer runtime
+        run: bun run hara:build
+
+      - name: Smoke-test analyzer startup and first analysis
+        shell: bash
         run: |
-          cargo test --manifest-path analyzers/hara/Cargo.toml
-          cargo build --release --manifest-path analyzers/hara/Cargo.toml
+          mkdir -p target
+          {
+            printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-describe","op":"describe"}'
+            printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-analyze","op":"analyze","language":"clojure","path":"smoke.clj","blob_oid":"smoke","source":"(ns smoke)\n(defn answer [x] (+ x 1))"}'
+            printf '%s\n' '{"protocol_version":"1.0","request_id":"startup-shutdown","op":"shutdown"}'
+          } | analyzers/hara/bin/historia-hara-analyzer \
+            > >(tee target/hara-startup.stdout) \
+            2> >(tee target/hara-startup.stderr >&2)
+          grep -q '"request_id":"startup-describe"' target/hara-startup.stdout
+          grep -q '"request_id":"startup-analyze"' target/hara-startup.stdout
+          grep -q '"request_id":"startup-shutdown"' target/hara-startup.stdout
 
       - name: Check Historia analyzer protocol conformance
         run: bun run conformance:hara
@@ -49,13 +64,18 @@ jobs:
             --output-dir target/clojure-analyzer-benchmarks
 
       - name: Upload benchmark reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hara-analyzer-scale-benchmark
-          path: target/clojure-analyzer-benchmarks
+          path: |
+            target/clojure-analyzer-benchmarks
+            target/hara-startup.stdout
+            target/hara-startup.stderr
+          if-no-files-found: ignore
 
       - name: Publish benchmark on the pull request
-        if: github.event_name == 'pull_request'
+        if: success() && github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

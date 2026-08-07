@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+set -eu
+
+ANALYZER_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
+HARA_RUNTIME_REV=${HARA_RUNTIME_REV:-agent/whole-wasm-code-analyzer}
+SOURCE_DIR=${HARA_SOURCE_DIR:-$ANALYZER_ROOT/target/hara-runtime}
+BUILD_DIR=${HARA_BUILD_DIR:-$ANALYZER_ROOT/target/hara-build}
+OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ANALYZER_ROOT/target/bin}
+RUNTIME="$OUTPUT_DIR/hara-rust-full"
+COMPAT_DIR="$ANALYZER_ROOT/target/release"
+COMPAT="$COMPAT_DIR/historia-hara-analyzer"
+
+if [ -z "${HARA_SOURCE_DIR:-}" ]; then
+  if [ ! -d "$SOURCE_DIR/.git" ]; then
+    rm -rf "$SOURCE_DIR"
+    git clone --filter=blob:none --no-checkout "$HARA_REPOSITORY" "$SOURCE_DIR"
+  fi
+  git -C "$SOURCE_DIR" fetch --depth 1 origin "$HARA_RUNTIME_REV"
+  git -C "$SOURCE_DIR" checkout --detach --force FETCH_HEAD
+fi
+
+CARGO_TARGET_DIR="$BUILD_DIR" cargo build \
+  --quiet \
+  --release \
+  --locked \
+  --manifest-path "$SOURCE_DIR/core/rust/Cargo.toml" \
+  --features whole-wasm \
+  --bin hara-rust-full
+
+mkdir -p "$OUTPUT_DIR" "$COMPAT_DIR"
+cp "$BUILD_DIR/release/hara-rust-full" "$RUNTIME"
+chmod +x "$RUNTIME"
+cat > "$COMPAT" <<EOF
+#!/usr/bin/env sh
+exec "$RUNTIME" analyzer "$ANALYZER_ROOT/analyzer.hal"
+EOF
+chmod +x "$COMPAT"
+printf '%s\n' "$RUNTIME"
