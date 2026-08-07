@@ -6,9 +6,11 @@ const metaTags = [...html.matchAll(/<meta\b[^>]*>/g)].map((match) => match[0]);
 
 function requireMeta(attribute, name, content) {
   const marker = `${attribute}="${name}"`;
-  const tag = metaTags.find((candidate) => candidate.includes(marker));
-  if (!tag) throw new Error(`Historia social metadata is missing: ${marker}`);
-  if (!tag.includes(`content="${content}"`)) {
+  const matches = metaTags.filter((candidate) => candidate.includes(marker));
+  if (matches.length !== 1) {
+    throw new Error(`Historia must publish exactly one ${marker}; found ${matches.length}`);
+  }
+  if (!matches[0].includes(`content="${content}"`)) {
     throw new Error(`Historia social metadata has the wrong content for ${marker}`);
   }
 }
