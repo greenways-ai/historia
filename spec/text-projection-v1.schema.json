@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["$schema", "projection", "graph_id", "analyzer", "document", "anchors", "nodes", "edges", "origins"],
   "properties": {
-    "$schema": { "const": "historia.text.projection/v1" },
+    "$schema": { "const": "historia.text.projection/0-alpha" },
     "projection": { "enum": ["source", "concepts", "work"] },
     "graph_id": { "$ref": "text-graph-v1.schema.json#/$defs/graphId" },
     "analyzer": { "$ref": "text-graph-v1.schema.json#/$defs/analyzer" },

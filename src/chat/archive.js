@@ -63,7 +63,7 @@ export async function archiveOpenAIExport({
       catch { previousSource = null; }
     }
     const sourceRecord = {
-      $schema: "historia.chat.source/v1",
+      $schema: "historia.chat.source/0-alpha",
       provider: "openai",
       key: exported.source.key,
       completeness: exported.source.completeness,
@@ -109,7 +109,7 @@ export async function archiveOpenAIExport({
       }
 
       const manifest = {
-        $schema: "historia.chat.conversation/v1",
+        $schema: "historia.chat.conversation/0-alpha",
         hid: conversation.hid,
         source: conversation.source,
         title: conversation.title,
@@ -131,7 +131,7 @@ export async function archiveOpenAIExport({
     const rawExportPrefix = `raw/exports/${exported.archive.sha256}`;
     const rawManifestPath = `${rawExportPrefix}/manifest.json`;
     files.set(rawManifestPath, canonicalJson({
-      $schema: "historia.chat.raw-export-manifest/v1",
+      $schema: "historia.chat.raw-export-manifest/0-alpha",
       provider: "openai",
       archive: exported.archive
     }));
@@ -142,7 +142,7 @@ export async function archiveOpenAIExport({
     }
 
     const receipt = {
-      $schema: "historia.chat.import-receipt/v1",
+      $schema: "historia.chat.import-receipt/0-alpha",
       provider: "openai",
       source_key: exported.source.key,
       source_ref: sourceRef,

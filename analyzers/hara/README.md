@@ -54,7 +54,7 @@ HTA encode → HTA decode → whole-Wasm → HTA encode → HTA decode
 → value display → source reparse
 ```
 
-HTA1 remains the portable cross-process value format in Hara, but it is not
+HTA0 remains the portable cross-process value format in Hara, but it is not
 needed for this in-process analyzer call.
 
 The Hara host also avoids retaining cloned reader `Form` trees, does not render

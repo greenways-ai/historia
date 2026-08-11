@@ -65,7 +65,7 @@ The sync boundary excludes:
 - browser cookies and ChatGPT tokens;
 - API keys, passwords, private keys, authorization values, and bearer tokens.
 
-A portable `historia.chatgpt.sync/1` JSON envelope is also supported. Imports
+A portable `historia.chatgpt.sync/0-alpha` JSON envelope is also supported. Imports
 merge deterministically by update timestamp and preserve deletion tombstones.
 
 ## Prompt handoff

@@ -22,7 +22,7 @@ const fixture = fileURLToPath(new URL("./fixtures/openai-export", import.meta.ur
 describe("Historia graph-backed topic index", () => {
   test("links topic mentions to graph nodes and carries graph facets into ranking signals", () => {
     const message = {
-      $schema: "historia.chat.message/v1",
+      $schema: "historia.chat.message/0-alpha",
       hid: "historia:openai:test:message:m1",
       source: {
         provider: "openai",

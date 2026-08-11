@@ -33,7 +33,7 @@ function sourceSlice(message, anchor) {
 describe("Historia text graphs", () => {
   test("builds deterministic, byte-anchored source, concept, and work projections", async () => {
     const message = {
-      $schema: "historia.chat.message/v1",
+      $schema: "historia.chat.message/0-alpha",
       hid: "historia:openai:test:message:m1",
       source: {
         provider: "openai",
@@ -57,7 +57,7 @@ describe("Historia text graphs", () => {
     const revisionOid = "a".repeat(40);
     const graph = analyzeMessageTextGraph(message, { revisionOid });
     expect(analyzeMessageTextGraph(message, { revisionOid })).toEqual(graph);
-    expect(graph.$schema).toBe("historia.text.graph/v1");
+    expect(graph.$schema).toBe("historia.text.graph/0-alpha");
     expect(graph.document.revision_oid).toBe(revisionOid);
     expect(graph.nodes.some((node) => node.kind === "request")).toBe(true);
     expect(graph.nodes.some((node) => node.kind === "rejection")).toBe(true);
@@ -134,7 +134,7 @@ describe("Historia text graphs", () => {
         const byMessage = loadMessageTextGraph(db, revision.message_hid, { projection: "concepts" });
         expect(graph.document.revision_oid).toBe(revision.revision_oid);
         expect(graph.nodes.some((node) => node.properties?.canonical_key === "project:greenways-ai/historia")).toBe(true);
-        expect(byMessage.$schema).toBe("historia.text.projection/v1");
+        expect(byMessage.$schema).toBe("historia.text.projection/0-alpha");
       } finally {
         db.close();
       }
@@ -154,7 +154,7 @@ describe("Historia text graphs", () => {
         "--no-index"
       ], { stdout: "pipe", stderr: "pipe" });
       expect(cli.exitCode).toBe(0);
-      expect(JSON.parse(cli.stdout.toString("utf8")).$schema).toBe("historia.text.projection/v1");
+      expect(JSON.parse(cli.stdout.toString("utf8")).$schema).toBe("historia.text.projection/0-alpha");
 
       await indexHistoriaChats({ vaultPath, databasePath, rebuild: true });
       db = await openChatIndex(databasePath);

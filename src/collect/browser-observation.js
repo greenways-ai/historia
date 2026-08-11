@@ -136,7 +136,7 @@ export function validateBrowserObservation(input, options = {}) {
   if (!isPlainObject(input)) throw new Error("browser observation must be an object");
   const encoded = Buffer.from(JSON.stringify(input));
   if (encoded.length > limits.maxObservationBytes) throw new Error("browser observation exceeds its byte limit");
-  if (input.$schema !== "historia.collect.browser-observation/v1") {
+  if (input.$schema !== "historia.collect.browser-observation/0-alpha") {
     throw new Error("unsupported browser observation schema");
   }
   if (input.provider !== undefined && input.provider !== "openai") throw new Error("browser observation provider must be openai");
@@ -200,7 +200,7 @@ export function validateBrowserObservation(input, options = {}) {
   }
 
   return {
-    $schema: "historia.collect.browser-observation/v1",
+    $schema: "historia.collect.browser-observation/0-alpha",
     provider: "openai",
     source_key: sourceKey,
     observed_at: timestamp(input.observed_at ?? new Date().toISOString(), "observed_at"),
@@ -234,7 +234,7 @@ export function normalizeBrowserObservation(input, options = {}) {
       providerMessageId: message.id,
       raw: message,
       normalized: {
-        $schema: "historia.chat.message/v1",
+        $schema: "historia.chat.message/0-alpha",
         hid,
         source: {
           provider: "openai",
@@ -263,7 +263,7 @@ export function normalizeBrowserObservation(input, options = {}) {
   })));
   const activePath = observation.active_path.map((id) => hidByProviderId.get(id));
   const normalized = {
-    $schema: "historia.chat.conversation/v1",
+    $schema: "historia.chat.conversation/0-alpha",
     hid: conversationHid,
     source: {
       provider: "openai",

@@ -1,6 +1,6 @@
 import { canonicalJson, sha256 } from "./identity.js";
 
-export const CHAT_TOPIC_INDEX_SCHEMA = "historia.chat.topic-index/v1";
+export const CHAT_TOPIC_INDEX_SCHEMA = "historia.chat.topic-index/0-alpha";
 
 const EXTRACTOR_NAME = "historia-graph-topic-index";
 const EXTRACTOR_VERSION = "0.1.0";

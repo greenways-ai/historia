@@ -14,7 +14,7 @@ export const COMPANION_STORAGE_KEY = "historiaChatGPTCompanion";
 export const COMPANION_SYNC_ENABLED_KEY = "historiaChatGPTSyncEnabled";
 export const COMPANION_SYNC_META_KEY = "historiaChatGPTSyncMeta";
 export const COMPANION_SYNC_CHUNK_PREFIX = "historiaChatGPTSyncChunk:";
-export const COMPANION_STORAGE_SYNC_PROTOCOL = "historia.chatgpt.storage-sync/1";
+export const COMPANION_STORAGE_SYNC_PROTOCOL = "historia.chatgpt.storage-sync/0-alpha";
 
 const SYNC_CHUNK_BYTES = 5 * 1024;
 const SHA256 = /^[a-f0-9]{64}$/;

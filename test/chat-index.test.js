@@ -43,7 +43,7 @@ describe("Historia chat retrieval", () => {
           radius: 1,
           generatedAt: "2026-08-04T03:00:00Z"
         });
-        expect(bundle.$schema).toBe("historia.chat.context-bundle/v1");
+        expect(bundle.$schema).toBe("historia.chat.context-bundle/0-alpha");
         expect(bundle.citations.length).toBeGreaterThan(0);
         expect(bundle.citations[0]).toMatchObject({ source_ref: archived.ref, commit_oid: archived.commitOid });
         expect(bundle.citations[0].message_path).toMatch(/^messages\//);

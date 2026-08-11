@@ -53,7 +53,7 @@ export async function archiveBrowserObservation({
     catch { previousSource = null; }
   }
   files.set(sourcePath, canonicalJson({
-    $schema: "historia.chat.source/v1",
+    $schema: "historia.chat.source/0-alpha",
     provider: "openai",
     key: sourceKey,
     completeness: "browser-observed",
@@ -99,7 +99,7 @@ export async function archiveBrowserObservation({
   }
 
   const manifest = {
-    $schema: "historia.chat.conversation/v1",
+    $schema: "historia.chat.conversation/0-alpha",
     hid: normalized.conversation.hid,
     source: normalized.conversation.source,
     title: normalized.conversation.title,
@@ -117,7 +117,7 @@ export async function archiveBrowserObservation({
   files.set(conversationPaths.manifest, canonicalJson(manifest));
 
   const receipt = {
-    $schema: "historia.chat.import-receipt/v1",
+    $schema: "historia.chat.import-receipt/0-alpha",
     provider: "openai",
     source_key: sourceKey,
     source_ref: sourceRef,

@@ -142,7 +142,7 @@ async function compileTarget(target, packageRoot) {
 
 async function writeBuildInfo(packageRoot, target, version) {
   const buildInfo = {
-    $schema: "historia.release.build-info/v1",
+    $schema: "historia.release.build-info/0-alpha",
     version,
     target: target.slug,
     bun_target: target.bunTarget,
@@ -228,7 +228,7 @@ async function writeReleaseMetadata(output, version, targets, assets) {
 
   const manifestPath = join(output, "release-manifest-v1.json");
   const manifest = {
-    $schema: "historia.release.manifest/v1",
+    $schema: "historia.release.manifest/0-alpha",
     version,
     source_commit: process.env.GITHUB_SHA ?? null,
     bun_version: Bun.version,

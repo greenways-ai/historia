@@ -91,7 +91,7 @@ Context selection is deterministic:
 Use `--include-branches` to pull direct branch neighbors around selected
 messages. Use `--historical` when the context should be allowed to start from a
 superseded message revision rather than the latest observed state. JSON output
-follows `historia.chat.context-bundle/v1`; Markdown output
+follows `historia.chat.context-bundle/0-alpha`; Markdown output
 contains `[H1]`, `[H2]`, and similar citations with a provenance section mapping
 each excerpt to its message revision, source ref, and archive commit.
 

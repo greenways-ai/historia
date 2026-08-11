@@ -33,7 +33,7 @@ export function normalizeOpenAIConversation(rawConversation, { sourceKey }) {
     const messageHid = historiaId("openai", sourceKey, "message", providerMessageId);
     const metadata = rawMessage.metadata ?? {};
     const normalized = {
-      $schema: "historia.chat.message/v1",
+      $schema: "historia.chat.message/0-alpha",
       hid: messageHid,
       source: {
         provider: "openai",
@@ -97,7 +97,7 @@ export function normalizeOpenAIConversation(rawConversation, { sourceKey }) {
   activePath.reverse();
 
   return {
-    $schema: "historia.chat.conversation/v1",
+    $schema: "historia.chat.conversation/0-alpha",
     hid,
     source: {
       provider: "openai",

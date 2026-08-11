@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["$schema", "provider", "key", "completeness", "first_observed_at", "last_observed_at", "importer"],
   "properties": {
-    "$schema": { "const": "historia.chat.source/v1" },
+    "$schema": { "const": "historia.chat.source/0-alpha" },
     "provider": { "type": "string", "minLength": 1 },
     "key": { "type": "string", "minLength": 1 },
     "completeness": {

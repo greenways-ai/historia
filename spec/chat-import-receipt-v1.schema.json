@@ -5,7 +5,7 @@
   "type": "object",
   "required": ["$schema", "provider", "source_key", "source_ref", "source_completeness", "archive", "importer", "observed_at", "include_raw_files", "stats", "warnings"],
   "properties": {
-    "$schema": { "const": "historia.chat.import-receipt/v1" },
+    "$schema": { "const": "historia.chat.import-receipt/0-alpha" },
     "provider": { "type": "string", "minLength": 1 },
     "source_key": { "type": "string", "minLength": 1 },
     "source_ref": { "type": "string", "pattern": "^refs/historia/sources/" },

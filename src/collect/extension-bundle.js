@@ -85,7 +85,7 @@ async function bundleIsCurrent(directory) {
 
 function receipt() {
   return {
-    $schema: "historia.collect.extension-bundle/v1",
+    $schema: "historia.collect.extension-bundle/0-alpha",
     bundle_sha256: COLLECT_EXTENSION_BUNDLE_SHA256,
     generated_at: null,
     files: FILE_RECORDS.map(({ path, byte_count, sha256: digest }) => ({ path, byte_count, sha256: digest })),

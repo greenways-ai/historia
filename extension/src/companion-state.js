@@ -1,7 +1,7 @@
-export const COMPANION_STATE_PROTOCOL = "historia.chatgpt.companion-state/1";
-export const CHAT_BOOKMARK_PROTOCOL = "historia.chatgpt.bookmark/1";
-export const PROMPT_TEMPLATE_PROTOCOL = "historia.chatgpt.prompt/1";
-export const COMPANION_SYNC_PROTOCOL = "historia.chatgpt.sync/1";
+export const COMPANION_STATE_PROTOCOL = "historia.chatgpt.companion-state/0-alpha";
+export const CHAT_BOOKMARK_PROTOCOL = "historia.chatgpt.bookmark/0-alpha";
+export const PROMPT_TEMPLATE_PROTOCOL = "historia.chatgpt.prompt/0-alpha";
+export const COMPANION_SYNC_PROTOCOL = "historia.chatgpt.sync/0-alpha";
 
 export const MAX_BOOKMARKS = 128;
 export const MAX_PROMPTS = 32;

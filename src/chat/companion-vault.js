@@ -8,8 +8,8 @@ import {
 import { defaultHistoriaVaultPath } from "./paths.js";
 import { GitVault } from "../vault/git-writer.js";
 
-export const CHATGPT_COMPANION_VAULT_PROTOCOL = "historia.chatgpt.vault-state/1";
-export const CHATGPT_COMPANION_SYNC_RECEIPT_PROTOCOL = "historia.chatgpt.vault-sync-receipt/1";
+export const CHATGPT_COMPANION_VAULT_PROTOCOL = "historia.chatgpt.vault-state/0-alpha";
+export const CHATGPT_COMPANION_SYNC_RECEIPT_PROTOCOL = "historia.chatgpt.vault-sync-receipt/0-alpha";
 export const CHATGPT_COMPANION_REF = "refs/historia/companion/chatgpt";
 export const CHATGPT_COMPANION_STATE_PATH = "companion/chatgpt/state.json";
 

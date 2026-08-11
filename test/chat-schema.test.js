@@ -43,7 +43,7 @@ describe("Historia chat schemas", () => {
     const validateReceipt = ajv.getSchema(receiptSchema.$id);
 
     const observation = {
-      $schema: "historia.collect.browser-observation/v1",
+      $schema: "historia.collect.browser-observation/0-alpha",
       provider: "openai",
       source_key: "browser-profile",
       observed_at: "2026-08-04T04:00:00Z",
@@ -68,7 +68,7 @@ describe("Historia chat schemas", () => {
     expect(validateNative({ protocol_version: "1.0", request_id: "capture-2", op: "capture" })).toBe(false);
 
     const receipt = {
-      $schema: "historia.chat.import-receipt/v1",
+      $schema: "historia.chat.import-receipt/0-alpha",
       provider: "openai",
       source_key: "source-1",
       source_ref: "refs/historia/sources/openai/source-1",
@@ -85,7 +85,7 @@ describe("Historia chat schemas", () => {
     expect(validateReceipt({ ...receipt, source_ref: "refs/historia/private/source-1" })).toBe(false);
 
     expect(validateContext({
-      $schema: "historia.chat.context-bundle/v1",
+      $schema: "historia.chat.context-bundle/0-alpha",
       generated_at: "2026-08-04T04:05:00Z",
       query: "Historia",
       budget: { requested_tokens: 1000, estimated_tokens: 0, estimator: "utf8-bytes-divided-by-four" },

@@ -2,7 +2,7 @@ import { canonicalJson, sha256 } from "./identity.js";
 import { blobToVector, cosineSimilarity, vectorToBlob } from "./neural-classifier.js";
 import { relatedTopics } from "./topic-index.js";
 
-export const CHAT_NEURAL_INDEX_SCHEMA = "historia.chat.neural-index/v1";
+export const CHAT_NEURAL_INDEX_SCHEMA = "historia.chat.neural-index/0-alpha";
 
 function jsonText(value) {
   return canonicalJson(value, { newline: false });

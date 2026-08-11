@@ -38,7 +38,7 @@ Browser sync is opt-in and contains only bounded companion metadata:
 
 It excludes conversation bodies, export files, Git objects, SQLite indexes, API keys, browser cookies, ChatGPT tokens, and private keys.
 
-The companion also supports a portable `historia.chatgpt.sync/1` JSON envelope. Imports merge records deterministically by update timestamp and retain tombstones.
+The companion also supports a portable `historia.chatgpt.sync/0-alpha` JSON envelope. Imports merge records deterministically by update timestamp and retain tombstones.
 
 ## Local archive
 

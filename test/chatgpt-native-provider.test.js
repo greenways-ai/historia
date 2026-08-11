@@ -121,9 +121,9 @@ describe("Historia ChatGPT native provider", () => {
     const calls = [];
     const companionState = emptyCompanionState();
     const companionStore = {
-      status: async () => ({ protocol: "historia.chatgpt.vault-state/1", head: null, state_sha256: companionStateDigest(companionState), counts: {} }),
-      pull: async () => ({ protocol: "historia.chatgpt.vault-state/1", head: null, state_sha256: companionStateDigest(companionState), state: companionState, counts: {} }),
-      push: async (value, options) => ({ protocol: "historia.chatgpt.vault-state/1", head: "a".repeat(40), state_sha256: companionStateDigest(value), state: value, counts: {}, options }),
+      status: async () => ({ protocol: "historia.chatgpt.vault-state/0-alpha", head: null, state_sha256: companionStateDigest(companionState), counts: {} }),
+      pull: async () => ({ protocol: "historia.chatgpt.vault-state/0-alpha", head: null, state_sha256: companionStateDigest(companionState), state: companionState, counts: {} }),
+      push: async (value, options) => ({ protocol: "historia.chatgpt.vault-state/0-alpha", head: "a".repeat(40), state_sha256: companionStateDigest(value), state: value, counts: {}, options }),
     };
     const fakeDb = { close() { calls.push(["close"]); } };
     const provider = createHistoriaNativeProvider({
@@ -161,7 +161,7 @@ describe("Historia ChatGPT native provider", () => {
           edges: [],
         }),
         buildChatContext: (_db, query, options) => ({
-          $schema: "historia.chat.context-bundle/v1",
+          $schema: "historia.chat.context-bundle/0-alpha",
           query,
           budget: { requested_tokens: options.budget, estimated_tokens: 42 },
           matches: { included_messages: 1, conversation_snapshots: 1 },
@@ -206,7 +206,7 @@ describe("Historia ChatGPT native provider", () => {
   test("routes provider operations through the existing allowed native caller boundary", async () => {
     const calls = [];
     const provider = {
-      protocol: "historia.native-provider/1",
+      protocol: "historia.native-provider/0-alpha",
       operations: HISTORIA_NATIVE_PROVIDER_OPERATIONS,
       handle: async (op, payload) => {
         calls.push([op, payload]);

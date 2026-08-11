@@ -15,7 +15,7 @@ import { GitVault } from "../src/vault/git-writer.js";
 
 function observation(overrides = {}) {
   return {
-    $schema: "historia.collect.browser-observation/v1",
+    $schema: "historia.collect.browser-observation/0-alpha",
     provider: "openai",
     source_key: "browser-profile-1",
     observed_at: "2026-08-04T04:00:00Z",

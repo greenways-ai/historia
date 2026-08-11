@@ -1,6 +1,6 @@
 import { sha256 } from "./identity.js";
 
-export const NEURAL_CLASSIFIER_SCHEMA = "historia.chat.neural-classifier/v1";
+export const NEURAL_CLASSIFIER_SCHEMA = "historia.chat.neural-classifier/0-alpha";
 export const DEFAULT_NEURAL_MODEL_ID = "Xenova/all-MiniLM-L6-v2";
 export const DEFAULT_NEURAL_MODEL_REVISION = "751bff37182d3f1213fa05d7196b954e230abad9";
 export const DEFAULT_NEURAL_DIMENSIONS = 384;

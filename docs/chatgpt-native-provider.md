@@ -15,7 +15,7 @@ Rerun `install` after upgrading Historia so the checksum-verified unpacked exten
 
 ## Operations
 
-The provider protocol is `historia.native-provider/1` and exposes a closed operation vocabulary:
+The provider protocol is `historia.native-provider/0-alpha` and exposes a closed operation vocabulary:
 
 ```text
 history/status
@@ -65,7 +65,7 @@ companion/chatgpt/state.json
 
 Each non-idempotent push also adds a sync receipt under `companion/chatgpt/receipts/`.
 
-The state envelope binds a SHA-256 digest of the canonical `historia.chatgpt.companion-state/1` value. Pull verifies the digest before returning state. Push validates the complete state, rejects secret-shaped fields through the companion schema, and commits with an expected-old Git OID.
+The state envelope binds a SHA-256 digest of the canonical `historia.chatgpt.companion-state/0-alpha` value. Pull verifies the digest before returning state. Push validates the complete state, rejects secret-shaped fields through the companion schema, and commits with an expected-old Git OID.
 
 If the caller's `expected_head` is stale, the provider deterministically merges both states and records `conflict_merged: true` rather than silently overwriting either side. Deletion tombstones participate in the same merge.
 

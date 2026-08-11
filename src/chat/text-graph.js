@@ -1,7 +1,7 @@
 import { canonicalJson, sha256 } from "./identity.js";
 
-export const TEXT_GRAPH_SCHEMA = "historia.text.graph/v1";
-export const TEXT_PROJECTION_SCHEMA = "historia.text.projection/v1";
+export const TEXT_GRAPH_SCHEMA = "historia.text.graph/0-alpha";
+export const TEXT_PROJECTION_SCHEMA = "historia.text.projection/0-alpha";
 
 const ANALYZER_NAME = "historia-basic-text-graph";
 const ANALYZER_VERSION = "0.1.0";

@@ -13,7 +13,7 @@ import {
 import { createCompanionVaultStore } from "../chat/companion-vault.js";
 import { GitVault } from "../vault/git-writer.js";
 
-export const HISTORIA_NATIVE_PROVIDER_PROTOCOL = "historia.native-provider/1";
+export const HISTORIA_NATIVE_PROVIDER_PROTOCOL = "historia.native-provider/0-alpha";
 export const HISTORIA_NATIVE_PROVIDER_OPERATIONS = Object.freeze([
   "history/status",
   "history/list",
@@ -161,7 +161,7 @@ function publicConversation(snapshot, { maxMessages, maxContentBytes }) {
   }
   if (snapshot.messages.length > messages.length) truncated = true;
   return Object.freeze({
-    protocol: "historia.history.conversation/1",
+    protocol: "historia.history.conversation/0-alpha",
     conversation_hid: snapshot.conversation_hid,
     title: snapshot.title,
     created_at: snapshot.created_at ?? null,
@@ -228,7 +228,7 @@ export function createHistoriaNativeProvider({
       heads: deps.chatIndexHeads(db),
     }));
     return bounded(Object.freeze({
-      protocol: "historia.history.status/1",
+      protocol: "historia.history.status/0-alpha",
       provider: HISTORIA_NATIVE_PROVIDER_PROTOCOL,
       vault: vault.repository,
       index_path: databasePath,
@@ -246,7 +246,7 @@ export function createHistoriaNativeProvider({
     const sourceRef = optionalText(payload.source_ref, "Historia history source_ref", 512);
     const { index, result } = await indexed((db) => deps.listChatConversations(db, { limit, sourceRef }));
     return bounded(Object.freeze({
-      protocol: "historia.history.list/1",
+      protocol: "historia.history.list/0-alpha",
       indexed: index,
       conversations: Object.freeze(result),
     }), "Historia history list");
@@ -272,7 +272,7 @@ export function createHistoriaNativeProvider({
     };
     const { index, result } = await indexed((db) => deps.searchChatIndex(db, query, options));
     return bounded(Object.freeze({
-      protocol: "historia.history.search/1",
+      protocol: "historia.history.search/0-alpha",
       query,
       indexed: index,
       results: Object.freeze(result.map(publicSearchHit)),
@@ -295,7 +295,7 @@ export function createHistoriaNativeProvider({
       commitOid: payload.commit_oid ?? null,
     }));
     return bounded(Object.freeze({
-      protocol: "historia.history.conversation-result/1",
+      protocol: "historia.history.conversation-result/0-alpha",
       indexed: index,
       conversation: publicConversation(result, { maxMessages, maxContentBytes }),
     }), "Historia conversation result");
@@ -315,7 +315,7 @@ export function createHistoriaNativeProvider({
     });
     const index = await deps.indexHistoriaChats({ vaultPath, databasePath });
     return bounded(Object.freeze({
-      protocol: "historia.history.import-export/1",
+      protocol: "historia.history.import-export/0-alpha",
       ok: archived.ok,
       idempotent: archived.idempotent,
       source_ref: archived.ref,
@@ -356,9 +356,9 @@ export function createHistoriaNativeProvider({
     };
     const { index, result: bundle } = await indexed((db) => deps.buildChatContext(db, query, options));
     const result = format === "bundle"
-      ? { protocol: "historia.context.result/1", format, indexed: index, bundle }
+      ? { protocol: "historia.context.result/0-alpha", format, indexed: index, bundle }
       : {
-          protocol: "historia.context.result/1",
+          protocol: "historia.context.result/0-alpha",
           format,
           indexed: index,
           markdown: deps.formatChatContextMarkdown(bundle),

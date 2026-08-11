@@ -147,7 +147,7 @@ export function buildChatContext(db, query, {
     .slice(0, conversationLimit);
 
   const bundle = {
-    $schema: "historia.chat.context-bundle/v1",
+    $schema: "historia.chat.context-bundle/0-alpha",
     generated_at: generatedAt,
     query: String(query ?? ""),
     budget: {

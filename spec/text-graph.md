@@ -9,7 +9,7 @@ normalized chat message revision. The original message object and its Git object
 ID remain authoritative. Graph nodes and edges interpret the message; they do
 not replace or rewrite it.
 
-The initial format is `historia.text.graph/v1`. Its canonical JSON schema is
+The initial format is `historia.text.graph/0-alpha`. Its canonical JSON schema is
 `spec/text-graph-v1.schema.json`.
 
 ## Invariants
@@ -112,7 +112,7 @@ Message-local v1 output uses only `observed`, `parsed`, and `resolved`.
 
 ## Projections
 
-The companion `historia.text.projection/v1` format selects a reversible view of
+The companion `historia.text.projection/0-alpha` format selects a reversible view of
 one base graph. The built-in projections are:
 
 - `source`: messages, blocks, sentences, and containment;

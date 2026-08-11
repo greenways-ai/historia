@@ -16,7 +16,7 @@
   ],
   "properties": {
     "$schema": {
-      "const": "historia.chat.context-bundle/v1"
+      "const": "historia.chat.context-bundle/0-alpha"
     },
     "generated_at": {
       "type": "string",
