@@ -1,7 +1,4 @@
-(ns historia.process
-  (:require [std.foundation.os :as os]
-            [std.foundation.promise :as promise]
-            [std.foundation.string :as string]))
+(ns historia.process)
 
 (defn run
   [argv]
@@ -13,8 +10,8 @@
                   (os/process-wait process)]))]
     {:argv argv
      :exit (nth values 2)
-     :stdout (string/decode-utf8 (nth values 0))
-     :stderr (string/decode-utf8 (nth values 1))}))
+     :stdout (str/decode-utf8 (nth values 0))
+     :stderr (str/decode-utf8 (nth values 1))}))
 
 (defn run!
   [argv]
@@ -23,10 +20,10 @@
       result
       (throw
        (ex-info
-        (string/join
+        (str/join
          ""
          ["command failed ("
           (:exit result)
           "): "
-          (string/join " " argv)])
+          (str/join " " argv)])
         result)))))

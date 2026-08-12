@@ -1,5 +1,4 @@
-(ns historia.cli
-  (:require [std.foundation.string :as string]))
+(ns historia.cli)
 
 (def version "0.1.0")
 
@@ -22,9 +21,9 @@
            (+ index 2)
            (assoc options :vault (nth arguments (+ index 1))))
           (error "--vault requires a path"))
-        (if (string/starts-with? argument "--vault=")
-          (let [value (string/slice argument 8)]
-            (if (string/blank? value)
+        (if (str/starts-with? argument "--vault=")
+          (let [value (str/slice argument 8)]
+            (if (str/blank? value)
               (error "--vault requires a path")
               (parse-vault-options
                arguments
@@ -32,7 +31,7 @@
                (assoc options :vault value))))
           (if (or (= argument "--help") (= argument "-h"))
             {:action :help}
-            (error (string/join "" ["unknown option: " argument]))))))
+            (error (str/join "" ["unknown option: " argument]))))))
     options))
 
 (defn parse
@@ -51,6 +50,6 @@
                   (parse-vault-options arguments 2 {:action :vault-init})
                   (if (= command "verify")
                     (parse-vault-options arguments 2 {:action :vault-verify})
-                    (error (string/join "" ["unknown vault command: " command])))))
+                    (error (str/join "" ["unknown vault command: " command])))))
               (error "vault requires init or verify"))
-            (error (string/join "" ["unknown command: " domain]))))))))
+            (error (str/join "" ["unknown command: " domain]))))))))

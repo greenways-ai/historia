@@ -1,7 +1,6 @@
 (ns historia.vault
   (:require [historia.path :as path]
-            [historia.process :as process]
-            [std.foundation.string :as string]))
+            [historia.process :as process]))
 
 (defn- append-all
   [output values index]
@@ -34,11 +33,11 @@
     (if (initialized? vault)
       nil
       (process/run! ["git" "init" "--bare" vault]))
-    (let [bare (string/trim (:stdout (git-run! vault ["rev-parse" "--is-bare-repository"])))
-          object-format (string/trim (:stdout (git-run! vault ["rev-parse" "--show-object-format"])))]
+    (let [bare (str/trim (:stdout (git-run! vault ["rev-parse" "--is-bare-repository"])))
+          object-format (str/trim (:stdout (git-run! vault ["rev-parse" "--show-object-format"])))]
       (if (= bare "true")
         {"vault" vault
-         "objectFormat" (if (string/blank? object-format) "sha1" object-format)}
+         "objectFormat" (if (str/blank? object-format) "sha1" object-format)}
         (throw (ex-info "Historia vault is not a bare Git repository" {:vault vault}))))))
 
 (defn verify
@@ -48,5 +47,5 @@
         result (git-run vault ["fsck" "--full" "--no-reflogs"])]
     {"vault" vault
      "ok" (= 0 (:exit result))
-     "stdout" (string/trim (:stdout result))
-     "stderr" (string/trim (:stderr result))}))
+     "stdout" (str/trim (:stdout result))
+     "stderr" (str/trim (:stderr result))}))

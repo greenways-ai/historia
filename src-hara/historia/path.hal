@@ -1,11 +1,8 @@
-(ns historia.path
-  (:require [std.foundation.file :as file]
-            [std.foundation.os :as os]
-            [std.foundation.string :as string]))
+(ns historia.path)
 
 (defn- join
   [left right]
-  (string/join "" [left right]))
+  (str/join "" [left right]))
 
 (defn home-directory
   []
@@ -15,10 +12,10 @@
 
 (defn absolute?
   [path]
-  (if (or (string/starts-with? path "/")
-          (string/starts-with? path "\\\\")
-          (and (< 1 (string/length path))
-               (= ":" (string/slice path 1 2))))
+  (if (or (str/starts-with? path "/")
+          (str/starts-with? path "\\\\")
+          (and (< 1 (str/length path))
+               (= ":" (str/slice path 1 2))))
     true
     false))
 

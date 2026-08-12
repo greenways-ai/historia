@@ -2,9 +2,7 @@
   (:require [hara.cli.application :as application]
             [historia.cli :as cli]
             [historia.path :as path]
-            [historia.vault :as vault]
-            [std.foundation.json :as json]
-            [std.foundation.string :as string]))
+            [historia.vault :as vault]))
 
 (defn- result
   [stdout stderr exit]
@@ -14,7 +12,7 @@
 
 (defn- line
   [value]
-  (string/join "" [value "\n"]))
+  (str/join "" [value "\n"]))
 
 (defn- json-result
   [value]
@@ -34,7 +32,7 @@
             (json-result (vault/verify (get parsed :vault)))
             (result
              ""
-             (string/join
+             (str/join
               ""
               ["historia: " (get parsed :message) "\n\n" cli/usage])
              2)))))))
