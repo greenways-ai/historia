@@ -33,10 +33,18 @@ jobs:
           target/bin/hara --project packages/core check
           target/bin/hara --project packages/core test
 
+      - name: Prove a project can select only historia-core
+        run: |
+          target/bin/hara --project examples/historia-core-consumer check
+          target/bin/hara --project examples/historia-core-consumer test
+
       - name: Check and test the Historia application project
         run: |
           target/bin/hara --project . check
           target/bin/hara --project . test
+
+      - name: Verify all built-in analyser assets
+        run: scripts/check-analyzer-assets
 
       - name: Exercise help and version without Bun
         run: |

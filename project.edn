@@ -7,4 +7,4 @@
  :project/extension-paths []
  :project/main historia.main
  :project/capabilities #{:file :process}
- :project/dependencies {}}
+ :project/dependencies {greenways/historia-core "^0.1.0"}}

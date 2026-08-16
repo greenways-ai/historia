@@ -1,0 +1,15 @@
+(ns example.historia-core-consumer-test
+  (:require [example.historia-core-consumer :as consumer]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "a capability-free project can select historia-core"
+   (consumer/describe)
+   {"dependency" "greenways/historia-core"
+    "analyzers" 4
+    "artifactSchema" "historia.artifact/0-alpha"
+    "indexSchema" "historia.index/0-alpha"})
+  (std.lib.test/check
+   "the consumer selects the Hara analyser contract"
+   (get (consumer/select-analyzer "hara") "id")
+   "hara")])

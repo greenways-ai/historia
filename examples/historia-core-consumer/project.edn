@@ -1,0 +1,9 @@
+{:hara/type :project
+ :hara/version "1.0.0"
+ :project/id example/historia-core-consumer
+ :project/version "0.1.0"
+ :project/source-paths ["../../packages/core/src" "src"]
+ :project/test-paths ["test"]
+ :project/extension-paths []
+ :project/capabilities #{}
+ :project/dependencies {greenways/historia-core "^0.1.0"}}

@@ -1,0 +1,15 @@
+(ns example.historia-core-consumer
+  (:require [historia.core.analyzer :as analyzer]
+            [historia.core.artifact :as artifact]
+            [historia.core.index :as index]))
+
+(defn describe
+  []
+  {"dependency" "greenways/historia-core"
+   "analyzers" (count analyzer/descriptors)
+   "artifactSchema" artifact/artifact-schema
+   "indexSchema" index/schema})
+
+(defn select-analyzer
+  [language]
+  (analyzer/for-language language))

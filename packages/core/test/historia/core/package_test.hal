@@ -11,9 +11,21 @@
     "schema")
    "historia.artifact/0-alpha")
   (std.lib.test/check
+   "the package exposes all four analyser families"
+   (count analyzer/descriptors)
+   4)
+  (std.lib.test/check
    "the package resolves a supported analyser"
    (get (analyzer/for-language "python") "id")
    "python")
+  (std.lib.test/check
+   "the package maps TypeScript to the JavaScript analyser family"
+   (get (analyzer/for-language "typescript") "id")
+   "javascript")
+  (std.lib.test/check
+   "the package leaves process selection to the consuming application"
+   (get analyzer/python "runtime")
+   nil)
   (std.lib.test/check
    "the package abstains for unknown languages"
    (analyzer/for-language "unknown")
