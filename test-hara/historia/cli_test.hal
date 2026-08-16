@@ -1,23 +1,32 @@
 (ns historia.cli-test
   (:require [historia.cli :as cli]))
 
-[(test-check
+(std.lib.test/print-results
+ [(std.lib.test/check
    "no arguments show help"
    (:action (cli/parse []))
    :help)
-  (test-check
+  (std.lib.test/check
    "version is a Hara command"
    (:action (cli/parse ["--version"]))
    :version)
-  (test-check
+  (std.lib.test/check
+   "the minimal Hara core is discoverable"
+   (:action (cli/parse ["core" "describe"]))
+   :core-describe)
+  (std.lib.test/check
+   "core describe rejects additional arguments"
+   (:action (cli/parse ["core" "describe" "extra"]))
+   :error)
+  (std.lib.test/check
    "vault init carries its explicit path"
    (cli/parse ["vault" "init" "--vault" "/tmp/historia.git"])
    {:action :vault-init :vault "/tmp/historia.git"})
-  (test-check
+  (std.lib.test/check
    "equals-form vault options are accepted"
    (cli/parse ["vault" "verify" "--vault=/tmp/historia.git"])
    {:action :vault-verify :vault "/tmp/historia.git"})
-  (test-check
+  (std.lib.test/check
    "unknown commands remain data"
    (:action (cli/parse ["unknown"]))
-   :error)]
+   :error)])

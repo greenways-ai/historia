@@ -1,0 +1,69 @@
+(ns historia.core.analyzer)
+
+(def protocol-version "1.0")
+
+(def analyzers
+  {:javascript
+   {"id" "javascript"
+    "name" "historia-typescript"
+    "protocolVersion" protocol-version
+    "command" ["bun" "analyzers/typescript/src/analyzer.js"]
+    "languages" ["javascript" "jsx" "typescript" "tsx"]
+    "extensions" [".js" ".jsx" ".mjs" ".cjs" ".ts" ".tsx"]}
+   :python
+   {"id" "python"
+    "name" "historia-python"
+    "protocolVersion" protocol-version
+    "command" ["python3" "analyzers/python/src/analyzer.py"]
+    "languages" ["python"]
+    "extensions" [".py" ".pyi" ".pyw"]}
+   :clojure
+   {"id" "clojure"
+    "name" "historia-clojure"
+    "protocolVersion" protocol-version
+    "command" ["bb"
+               "-cp"
+               "analyzers/clojure/src"
+               "-m"
+               "greenways-historian.analyzer"]
+    "languages" ["clojure" "babashka"]
+    "extensions" [".clj" ".bb"]}
+   :hara
+   {"id" "hara"
+    "name" "historia-hara"
+    "protocolVersion" protocol-version
+    "command" ["analyzers/hara/bin/historia-hara-analyzer"]
+    "languages" ["hara"]
+    "extensions" [".hal"]}})
+
+(def analyzer-by-language
+  {"javascript" :javascript
+   "jsx" :javascript
+   "typescript" :javascript
+   "tsx" :javascript
+   "python" :python
+   "clojure" :clojure
+   "babashka" :clojure
+   "hara" :hara})
+
+(defn all
+  []
+  [(get analyzers :javascript)
+   (get analyzers :python)
+   (get analyzers :clojure)
+   (get analyzers :hara)])
+
+(defn for-language
+  [language]
+  (get analyzers (get analyzer-by-language language)))
+
+(defn request
+  [request-id language path blob-oid source]
+  {"protocol_version" protocol-version
+   "request_id" request-id
+   "op" "analyze"
+   "language" language
+   "path" path
+   "blob_oid" blob-oid
+   "source" source
+   "config" {}})

@@ -1,0 +1,51 @@
+(ns historia.core.index)
+
+(def schema "historia.index/0-alpha")
+
+(defn descriptor
+  []
+  {"schema" schema
+   "implementation" "memory"
+   "authoritative" false
+   "rebuildable" true})
+
+(defn create
+  []
+  {"schema" schema
+   "artifacts" {}
+   "analyses" {}
+   "links" {}})
+
+(defn- put-record
+  [index bucket id value]
+  (assoc index bucket (assoc (get index bucket) id value)))
+
+(defn put-artifact
+  [index artifact]
+  (put-record index "artifacts" (get artifact "id") artifact))
+
+(defn put-analysis
+  [index analysis]
+  (put-record index "analyses" (get analysis "id") analysis))
+
+(defn put-link
+  [index link]
+  (put-record index "links" (get link "id") link))
+
+(defn artifact
+  [index id]
+  (get (get index "artifacts") id))
+
+(defn analysis
+  [index id]
+  (get (get index "analyses") id))
+
+(defn link
+  [index id]
+  (get (get index "links") id))
+
+(defn counts
+  [index]
+  {"artifacts" (count (get index "artifacts"))
+   "analyses" (count (get index "analyses"))
+   "links" (count (get index "links"))})

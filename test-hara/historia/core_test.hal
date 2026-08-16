@@ -1,0 +1,109 @@
+(ns historia.core-test
+  (:require [historia.core :as core]
+            [historia.core.analyzer :as analyzer]
+            [historia.core.artifact :as artifact]
+            [historia.core.index :as index]
+            [historia.provider.github :as github]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the core advertises a rebuildable memory index"
+   (get (get (core/descriptor) "index") "implementation")
+   "memory")
+  (std.lib.test/check
+   "Python resolves to the Python analyser"
+   (get (analyzer/for-language "python") "id")
+   "python")
+  (std.lib.test/check
+   "Hara source resolves to the Hara analyser"
+   (get (analyzer/for-language "hara") "id")
+   "hara")
+  (std.lib.test/check
+   "unknown languages abstain"
+   (analyzer/for-language "unknown")
+   nil)
+  (std.lib.test/check
+   "GitHub issues normalize to stable artifact identities"
+   (get
+    (github/issue
+     {:repository "greenways-ai/historia"
+      :number 69
+      :title "Minimal Hara core"
+      :body "Start with artifacts, analysers and an index."
+      :updated-at "2026-08-16T21:40:38Z"})
+    "id")
+   "github:greenways-ai/historia#69")
+  (std.lib.test/check
+   "GitHub title and body remain separate blocks"
+   (count
+    (get
+     (github/issue
+      {:repository "greenways-ai/historia"
+       :number 69
+       :title "Minimal Hara core"
+       :body "Start with artifacts, analysers and an index."
+       :updated-at "2026-08-16T21:40:38Z"})
+     "blocks"))
+   2)
+  (std.lib.test/check
+   "the in-memory index retrieves the exact artifact"
+   (index/artifact
+    (index/put-artifact
+     (index/create)
+     (github/issue
+      {:repository "greenways-ai/historia"
+       :number 69
+       :title "Minimal Hara core"
+       :body "Start with artifacts, analysers and an index."
+       :updated-at "2026-08-16T21:40:38Z"}))
+    "github:greenways-ai/historia#69")
+   (github/issue
+    {:repository "greenways-ai/historia"
+     :number 69
+     :title "Minimal Hara core"
+     :body "Start with artifacts, analysers and an index."
+     :updated-at "2026-08-16T21:40:38Z"}))
+  (std.lib.test/check
+   "the in-memory index keeps independent record families"
+   (index/counts
+    (index/put-link
+     (index/put-analysis
+      (index/put-artifact
+       (index/create)
+       (github/issue
+        {:repository "greenways-ai/historia"
+         :number 69
+         :title "Minimal Hara core"
+         :body "Start with artifacts, analysers and an index."
+         :updated-at "2026-08-16T21:40:38Z"}))
+      (artifact/analysis
+       "analysis:github:greenways-ai/historia#69/body"
+       "github:greenways-ai/historia#69"
+       "github:greenways-ai/historia#69/body"
+       "python"
+       {"symbols" []}))
+     (artifact/link
+      "link:issue-69"
+      "conversation:example"
+      "github:greenways-ai/historia#69"
+      "discusses"
+      {"method" "explicit"})))
+   {"artifacts" 1
+    "analyses" 1
+    "links" 1})
+  (std.lib.test/check
+   "analyser requests retain the shared JSONL envelope"
+   (analyzer/request
+    "request-1"
+    "python"
+    "historia://github/greenways-ai/historia/69/body.py"
+    "blob-1"
+    "answer = 42")
+   {"protocol_version" "1.0"
+    "request_id" "request-1"
+    "op" "analyze"
+    "language" "python"
+    "path" "historia://github/greenways-ai/historia/69/body.py"
+    "blob_oid" "blob-1"
+    "source" "answer = 42"
+    "config" {}})])

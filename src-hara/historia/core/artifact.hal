@@ -1,0 +1,41 @@
+(ns historia.core.artifact)
+
+(def artifact-schema "historia.artifact/0-alpha")
+(def block-schema "historia.block/0-alpha")
+(def analysis-schema "historia.analysis/0-alpha")
+(def link-schema "historia.link/0-alpha")
+
+(defn block
+  [id kind text attributes]
+  {"schema" block-schema
+   "id" id
+   "kind" kind
+   "text" (or text "")
+   "attributes" (or attributes {})})
+
+(defn create
+  [id kind source revision blocks]
+  {"schema" artifact-schema
+   "id" id
+   "kind" kind
+   "source" source
+   "revision" revision
+   "blocks" blocks})
+
+(defn analysis
+  [id artifact-id block-id analyzer-id result]
+  {"schema" analysis-schema
+   "id" id
+   "artifactId" artifact-id
+   "blockId" block-id
+   "analyzerId" analyzer-id
+   "result" result})
+
+(defn link
+  [id from-id to-id relation evidence]
+  {"schema" link-schema
+   "id" id
+   "from" from-id
+   "to" to-id
+   "relation" relation
+   "evidence" (or evidence {})})
