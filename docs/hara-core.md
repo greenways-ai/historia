@@ -14,6 +14,10 @@ order in which data passes through them. GitHub synchronization, SQLite,
 long-lived worker supervision, chat import, graph construction and browser
 collection are added as vertical slices after these contracts settle.
 
+`historia.kernel` assembles the active application registry. Leaf contracts live
+beneath `historia.core.*`. Keeping the aggregate namespace separate avoids making
+one namespace both a concrete module and the parent of other modules.
+
 ## Core boundaries
 
 ### Artifacts
@@ -50,7 +54,7 @@ already-observed issue map and produces a provider-neutral artifact. Network
 access, authentication, pagination and synchronization are intentionally outside
 the first slice.
 
-GitHub writes are disabled in the core descriptor. Any later writeback is an
+GitHub writes are disabled in the kernel descriptor. Any later writeback is an
 explicit reviewed effect, separate from indexing.
 
 ### Analysers
@@ -103,8 +107,23 @@ link.project
 ```
 
 The first implementation exposes this order through `historia core describe`
-and `historia.core/ingest-plan`. The stages are contracts, not a claim that all
+and `historia.kernel/ingest-plan`. The stages are contracts, not a claim that all
 effects are implemented.
+
+## Command output
+
+The Hara executable emits newline-terminated Hara data text for structured
+commands such as:
+
+```text
+historia core describe
+historia vault init
+historia vault verify
+```
+
+This keeps the first application boundary self-hosted and machine-readable
+without requiring a JavaScript JSON helper. A later output-format layer can add
+explicit JSON or other encodings without changing the underlying records.
 
 ## Migration boundary
 
