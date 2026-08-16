@@ -1,7 +1,7 @@
 (ns historia.main
   (:require [hara.cli.application :as application]
             [historia.cli :as cli]
-            [historia.core :as core]
+            [historia.kernel :as kernel]
             [historia.path :as path]
             [historia.vault :as vault]))
 
@@ -28,7 +28,7 @@
       (if (= action :version)
         (result (line cli/version) "" 0)
         (if (= action :core-describe)
-          (json-result core/descriptor)
+          (json-result kernel/descriptor)
           (if (= action :vault-init)
             (json-result (vault/init (get parsed :vault)))
             (if (= action :vault-verify)

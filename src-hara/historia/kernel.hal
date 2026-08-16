@@ -1,4 +1,4 @@
-(ns historia.core
+(ns historia.kernel
   (:require [historia.core.analyzer :as analyzer]
             [historia.core.index :as index]
             [historia.provider.github :as github]))
