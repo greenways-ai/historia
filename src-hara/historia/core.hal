@@ -13,14 +13,14 @@
    "index.write"
    "link.project"])
 
-(defn describe
+(defn descriptor
   []
   {"schema" schema
    "version" "0.1.0"
    "stages" stages
-   "providers" [(github/describe)]
+   "providers" [(github/descriptor)]
    "analyzers" (analyzer/all)
-   "index" (index/describe)})
+   "index" (index/descriptor)})
 
 (defn create
   []

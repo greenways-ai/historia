@@ -2,7 +2,7 @@
 
 (def schema "historia.index/0-alpha")
 
-(defn describe
+(defn descriptor
   []
   {"schema" schema
    "implementation" "memory"

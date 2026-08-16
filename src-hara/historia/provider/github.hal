@@ -7,13 +7,13 @@
    "artifacts" ["repository" "issue" "comment"]
    "writesEnabled" false})
 
-(defn describe
+(defn descriptor
   []
   provider)
 
 (defn issue-id
   [repository number]
-  (str/join "" ["github:" repository "#" number]))
+  (str/join "" ["github:" repository "#" (str number)]))
 
 (defn- block-id
   [issue-id suffix]
