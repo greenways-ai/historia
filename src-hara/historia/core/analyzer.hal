@@ -53,7 +53,7 @@
    (get analyzers :clojure)
    (get analyzers :hara)])
 
-(defn resolve
+(defn for-language
   [language]
   (get analyzers (get analyzer-by-language language)))
 

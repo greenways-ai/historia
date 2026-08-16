@@ -1,7 +1,8 @@
 (ns historia.cli-test
   (:require [historia.cli :as cli]))
 
-[(std.lib.test/check
+(std.lib.test/print-results
+ [(std.lib.test/check
    "no arguments show help"
    (:action (cli/parse []))
    :help)
@@ -28,4 +29,4 @@
   (std.lib.test/check
    "unknown commands remain data"
    (:action (cli/parse ["unknown"]))
-   :error)]
+   :error)])

@@ -5,21 +5,22 @@
             [historia.core.index :as index]
             [historia.provider.github :as github]))
 
-[(std.lib.test/check
+(std.lib.test/print-results
+ [(std.lib.test/check
    "the core advertises a rebuildable memory index"
    (get (get (core/describe) "index") "implementation")
    "memory")
   (std.lib.test/check
    "Python resolves to the Python analyser"
-   (get (analyzer/resolve "python") "id")
+   (get (analyzer/for-language "python") "id")
    "python")
   (std.lib.test/check
    "Hara source resolves to the Hara analyser"
-   (get (analyzer/resolve "hara") "id")
+   (get (analyzer/for-language "hara") "id")
    "hara")
   (std.lib.test/check
    "unknown languages abstain"
-   (analyzer/resolve "unknown")
+   (analyzer/for-language "unknown")
    nil)
   (std.lib.test/check
    "GitHub issues normalize to stable artifact identities"
@@ -105,4 +106,4 @@
     "path" "historia://github/greenways-ai/historia/69/body.py"
     "blob_oid" "blob-1"
     "source" "answer = 42"
-    "config" {}})]
+    "config" {}})])
