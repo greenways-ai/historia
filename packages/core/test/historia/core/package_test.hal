@@ -1,0 +1,33 @@
+(ns historia.core.package-test
+  (:require [historia.core.analyzer :as analyzer]
+            [historia.core.artifact :as artifact]
+            [historia.core.index :as index]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the package exposes the artifact schema"
+   (get
+    (artifact/create "artifact:1" "example" {} "revision:1" [])
+    "schema")
+   "historia.artifact/0-alpha")
+  (std.lib.test/check
+   "the package resolves a supported analyser"
+   (get (analyzer/for-language "python") "id")
+   "python")
+  (std.lib.test/check
+   "the package abstains for unknown languages"
+   (analyzer/for-language "unknown")
+   nil)
+  (std.lib.test/check
+   "the package index stores independent record families"
+   (index/counts
+    (index/put-link
+     (index/put-analysis
+      (index/put-artifact
+       (index/create)
+       (artifact/create "artifact:1" "example" {} "revision:1" []))
+      (artifact/analysis "analysis:1" "artifact:1" nil "python" {}))
+     (artifact/link "link:1" "artifact:1" "artifact:2" "related" {})))
+   {"artifacts" 1
+    "analyses" 1
+    "links" 1})])

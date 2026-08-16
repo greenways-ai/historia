@@ -1,9 +1,9 @@
 {:hara/type :project
  :hara/version "1.0.0"
- :project/id historia
+ :project/id greenways/historia
  :project/version "0.1.0"
- :project/source-paths ["src-hara"]
- :project/test-paths ["test-hara"]
+ :project/source-paths ["packages/core/src" "src-hara"]
+ :project/test-paths ["packages/core/test" "test-hara"]
  :project/extension-paths []
  :project/main historia.main
  :project/capabilities #{:file :process}
