@@ -5,37 +5,6 @@
             [historia.core.index :as index]
             [historia.provider.github :as github]))
 
-(def issue
-  (github/issue
-   {:repository "greenways-ai/historia"
-    :number 69
-    :title "Minimal Hara core"
-    :body "Start with artifacts, analysers and an index."
-    :updated-at "2026-08-16T21:40:38Z"}))
-
-(def analysis-record
-  (artifact/analysis
-   "analysis:github:greenways-ai/historia#69/body"
-   (get issue "id")
-   "github:greenways-ai/historia#69/body"
-   "python"
-   {"symbols" []}))
-
-(def link-record
-  (artifact/link
-   "link:issue-69"
-   "conversation:example"
-   (get issue "id")
-   "discusses"
-   {"method" "explicit"}))
-
-(def indexed
-  (index/put-link
-   (index/put-analysis
-    (index/put-artifact (index/create) issue)
-    analysis-record)
-   link-record))
-
 [(test-check
    "the core advertises a rebuildable memory index"
    (get (get (core/describe) "index") "implementation")
@@ -54,19 +23,70 @@
    nil)
   (test-check
    "GitHub issues normalize to stable artifact identities"
-   (get issue "id")
+   (get
+    (github/issue
+     {:repository "greenways-ai/historia"
+      :number 69
+      :title "Minimal Hara core"
+      :body "Start with artifacts, analysers and an index."
+      :updated-at "2026-08-16T21:40:38Z"})
+    "id")
    "github:greenways-ai/historia#69")
   (test-check
    "GitHub title and body remain separate blocks"
-   (count (get issue "blocks"))
+   (count
+    (get
+     (github/issue
+      {:repository "greenways-ai/historia"
+       :number 69
+       :title "Minimal Hara core"
+       :body "Start with artifacts, analysers and an index."
+       :updated-at "2026-08-16T21:40:38Z"})
+     "blocks"))
    2)
   (test-check
    "the in-memory index retrieves the exact artifact"
-   (index/artifact indexed (get issue "id"))
-   issue)
+   (index/artifact
+    (index/put-artifact
+     (index/create)
+     (github/issue
+      {:repository "greenways-ai/historia"
+       :number 69
+       :title "Minimal Hara core"
+       :body "Start with artifacts, analysers and an index."
+       :updated-at "2026-08-16T21:40:38Z"}))
+    "github:greenways-ai/historia#69")
+   (github/issue
+    {:repository "greenways-ai/historia"
+     :number 69
+     :title "Minimal Hara core"
+     :body "Start with artifacts, analysers and an index."
+     :updated-at "2026-08-16T21:40:38Z"}))
   (test-check
    "the in-memory index keeps independent record families"
-   (index/counts indexed)
+   (index/counts
+    (index/put-link
+     (index/put-analysis
+      (index/put-artifact
+       (index/create)
+       (github/issue
+        {:repository "greenways-ai/historia"
+         :number 69
+         :title "Minimal Hara core"
+         :body "Start with artifacts, analysers and an index."
+         :updated-at "2026-08-16T21:40:38Z"}))
+      (artifact/analysis
+       "analysis:github:greenways-ai/historia#69/body"
+       "github:greenways-ai/historia#69"
+       "github:greenways-ai/historia#69/body"
+       "python"
+       {"symbols" []}))
+     (artifact/link
+      "link:issue-69"
+      "conversation:example"
+      "github:greenways-ai/historia#69"
+      "discusses"
+      {"method" "explicit"})))
    {"artifacts" 1
     "analyses" 1
     "links" 1})
