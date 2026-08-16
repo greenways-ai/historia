@@ -28,7 +28,7 @@
       (if (= action :version)
         (result (line cli/version) "" 0)
         (if (= action :core-describe)
-          (json-result (core/descriptor))
+          (json-result core/descriptor)
           (if (= action :vault-init)
             (json-result (vault/init (get parsed :vault)))
             (if (= action :vault-verify)

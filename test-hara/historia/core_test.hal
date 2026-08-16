@@ -8,7 +8,7 @@
 (std.lib.test/print-results
  [(std.lib.test/check
    "the core advertises a rebuildable memory index"
-   (get (get (core/descriptor) "index") "implementation")
+   (get (get core/descriptor "index") "implementation")
    "memory")
   (std.lib.test/check
    "Python resolves to the Python analyser"

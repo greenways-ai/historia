@@ -7,10 +7,6 @@
    "artifacts" ["repository" "issue" "comment"]
    "writesEnabled" false})
 
-(defn descriptor
-  []
-  provider)
-
 (defn issue-id
   [repository number]
   (str/join "" ["github:" repository "#" (str number)]))
