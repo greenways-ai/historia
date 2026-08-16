@@ -2,19 +2,19 @@
   (:require [historia.path :as path]
             [historia.vault :as vault]))
 
-[(test-check
+[(std.lib.test/check
    "Git vault commands are argv, never shell strings"
    (vault/git-argv "/tmp/vault.git" ["rev-parse" "--git-dir"])
    ["git" "--git-dir" "/tmp/vault.git" "rev-parse" "--git-dir"])
-  (test-check
+  (std.lib.test/check
    "Unix absolute vault paths remain unchanged"
    (path/vault-path "/tmp/vault.git")
    "/tmp/vault.git")
-  (test-check
+  (std.lib.test/check
    "Windows drive paths are recognized as absolute"
    (path/absolute? "C:\\Historia\\vault.git")
    true)
-  (test-check
+  (std.lib.test/check
    "relative paths are not classified as absolute"
    (path/absolute? "target/vault.git")
    false)]

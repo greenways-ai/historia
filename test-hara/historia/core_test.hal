@@ -5,23 +5,23 @@
             [historia.core.index :as index]
             [historia.provider.github :as github]))
 
-[(test-check
+[(std.lib.test/check
    "the core advertises a rebuildable memory index"
    (get (get (core/describe) "index") "implementation")
    "memory")
-  (test-check
+  (std.lib.test/check
    "Python resolves to the Python analyser"
    (get (analyzer/resolve "python") "id")
    "python")
-  (test-check
+  (std.lib.test/check
    "Hara source resolves to the Hara analyser"
    (get (analyzer/resolve "hara") "id")
    "hara")
-  (test-check
+  (std.lib.test/check
    "unknown languages abstain"
    (analyzer/resolve "unknown")
    nil)
-  (test-check
+  (std.lib.test/check
    "GitHub issues normalize to stable artifact identities"
    (get
     (github/issue
@@ -32,7 +32,7 @@
       :updated-at "2026-08-16T21:40:38Z"})
     "id")
    "github:greenways-ai/historia#69")
-  (test-check
+  (std.lib.test/check
    "GitHub title and body remain separate blocks"
    (count
     (get
@@ -44,7 +44,7 @@
        :updated-at "2026-08-16T21:40:38Z"})
      "blocks"))
    2)
-  (test-check
+  (std.lib.test/check
    "the in-memory index retrieves the exact artifact"
    (index/artifact
     (index/put-artifact
@@ -62,7 +62,7 @@
      :title "Minimal Hara core"
      :body "Start with artifacts, analysers and an index."
      :updated-at "2026-08-16T21:40:38Z"}))
-  (test-check
+  (std.lib.test/check
    "the in-memory index keeps independent record families"
    (index/counts
     (index/put-link
@@ -90,7 +90,7 @@
    {"artifacts" 1
     "analyses" 1
     "links" 1})
-  (test-check
+  (std.lib.test/check
    "analyser requests retain the shared JSONL envelope"
    (analyzer/request
     "request-1"
