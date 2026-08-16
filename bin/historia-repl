@@ -1,0 +1,109 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+SOURCE_ROOT=${HISTORIA_REPL_SOURCE_ROOT:-$ROOT/target/historia-repl-source}
+RUNTIME=${HARA_CLI:-}
+
+usage() {
+  cat <<'EOF'
+Historia native Hara REPL
+
+Usage:
+  historia repl
+  historia repl --resp [HARA_REPL_OPTIONS]
+  historia repl --eval FORM
+
+The default REPL is offline. Use --resp to start Hara's local RESP listener.
+Other Hara terminal options are passed through, including --history,
+--no-history, --no-splash, --no-color, --host and --port.
+
+Inside the REPL:
+  (require [historia.repl :as historia])
+  (historia/describe)
+EOF
+}
+
+resolve_runtime() {
+  if [ -n "$RUNTIME" ]; then
+    return
+  fi
+  if [ -x "$ROOT/target/bin/hara" ]; then
+    RUNTIME="$ROOT/target/bin/hara"
+    return
+  fi
+  RUNTIME=$(command -v hara || true)
+  if [ -n "$RUNTIME" ]; then
+    return
+  fi
+  sh "$ROOT/bin/build-hara-app" >/dev/null
+  RUNTIME="$ROOT/target/bin/hara"
+}
+
+prepare_sources() {
+  rm -rf "$SOURCE_ROOT"
+  mkdir -p "$SOURCE_ROOT"
+  cp -R "$ROOT/packages/core/src/." "$SOURCE_ROOT/"
+  cp -R "$ROOT/src-hara/." "$SOURCE_ROOT/"
+}
+
+case "${1:-}" in
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  --eval)
+    shift
+    if [ "$#" -ne 1 ]; then
+      echo "historia repl: --eval requires exactly one Hara form" >&2
+      exit 2
+    fi
+    resolve_runtime
+    prepare_sources
+    exec "$RUNTIME" \
+      --project "$ROOT" \
+      --root "$SOURCE_ROOT" \
+      --allow-file \
+      --allow-process \
+      eval "$1"
+    ;;
+  --eval=*)
+    SOURCE=${1#--eval=}
+    if [ -z "$SOURCE" ] || [ "$#" -ne 1 ]; then
+      echo "historia repl: --eval requires exactly one Hara form" >&2
+      exit 2
+    fi
+    resolve_runtime
+    prepare_sources
+    exec "$RUNTIME" \
+      --project "$ROOT" \
+      --root "$SOURCE_ROOT" \
+      --allow-file \
+      --allow-process \
+      eval "$SOURCE"
+    ;;
+  --resp)
+    shift
+    resolve_runtime
+    prepare_sources
+    exec "$RUNTIME" \
+      --project "$ROOT" \
+      --root "$SOURCE_ROOT" \
+      --allow-file \
+      --allow-process \
+      "$@" \
+      repl
+    ;;
+  *)
+    resolve_runtime
+    prepare_sources
+    exec "$RUNTIME" \
+      --project "$ROOT" \
+      --root "$SOURCE_ROOT" \
+      --allow-file \
+      --allow-process \
+      --offline \
+      "$@" \
+      repl
+    ;;
+esac

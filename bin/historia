@@ -2,6 +2,12 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+if [ "${1:-}" = "repl" ]; then
+  shift
+  exec "$ROOT/bin/historia-repl" "$@"
+fi
+
 RUNTIME=${HARA_APP:-}
 
 if [ -z "$RUNTIME" ] && [ -x "$ROOT/target/bin/hara-app" ]; then

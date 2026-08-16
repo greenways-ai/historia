@@ -28,8 +28,15 @@ jobs:
             --manifest-path target/hara-runtime/core/rust/Cargo.toml \
             --bin hara-app
 
-      - name: Run Historia Hara tests
-        run: target/bin/hara --project . test
+      - name: Check and test the capability-free core package
+        run: |
+          target/bin/hara --project packages/core check
+          target/bin/hara --project packages/core test
+
+      - name: Check and test the Historia application project
+        run: |
+          target/bin/hara --project . check
+          target/bin/hara --project . test
 
       - name: Exercise help and version without Bun
         run: |
@@ -37,7 +44,23 @@ jobs:
           bin/historia --help | tee target/hara-application/help.txt
           bin/historia --version | tee target/hara-application/version.txt
           grep -q 'Historia 0.1.0' target/hara-application/help.txt
+          grep -q 'historia repl' target/hara-application/help.txt
           grep -q '^0.1.0$' target/hara-application/version.txt
+
+      - name: Exercise the native Historia REPL without Bun
+        run: |
+          bin/historia repl --eval \
+            '(do (require [historia.repl :as historia]) (historia/describe))' \
+            | tee target/hara-application/repl-eval.edn
+          grep -q 'historia.core/0-alpha' target/hara-application/repl-eval.edn
+
+          printf '%s\n' \
+            '(require [historia.repl :as historia])' \
+            '(historia/describe)' \
+            '/quit' \
+            | bin/historia repl --no-splash --no-history \
+            | tee target/hara-application/repl-plain.txt
+          grep -q 'historia.core/0-alpha' target/hara-application/repl-plain.txt
 
       - name: Describe the minimal Hara core without Bun
         run: |

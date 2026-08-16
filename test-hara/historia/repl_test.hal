@@ -1,0 +1,27 @@
+(ns historia.repl-test
+  (:require [historia.repl :as repl]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the REPL describes the active Historia kernel"
+   (get (repl/describe) "schema")
+   "historia.core/0-alpha")
+  (std.lib.test/check
+   "the REPL creates an empty rebuildable index"
+   (get (repl/new-index) "schema")
+   "historia.index/0-alpha")
+  (std.lib.test/check
+   "the REPL exposes analyser selection"
+   (get (repl/analyzer "hara") "id")
+   "hara")
+  (std.lib.test/check
+   "the REPL normalizes GitHub issues"
+   (get
+    (repl/github-issue
+     {:repository "greenways-ai/historia"
+      :number 73
+      :title "Historia REPL"
+      :body "Native Hara REPL"
+      :updated-at "2026-08-17T00:00:00Z"})
+    "id")
+   "github:greenways-ai/historia#73")])

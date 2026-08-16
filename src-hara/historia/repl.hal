@@ -1,0 +1,36 @@
+(ns historia.repl
+  (:require [historia.kernel :as kernel]
+            [historia.core.analyzer :as analyzer]
+            [historia.core.index :as index]
+            [historia.provider.github :as github]))
+
+(def descriptor
+  {:repl/name "Historia"
+   :repl/runtime :hara/native
+   :repl/default-mode :offline
+   :repl/helpers
+   ['describe
+    'new-index
+    'analyzer
+    'github-issue
+    'ingest-plan]})
+
+(defn describe
+  []
+  kernel/descriptor)
+
+(defn new-index
+  []
+  (index/create))
+
+(defn analyzer
+  [language]
+  (analyzer/for-language language))
+
+(defn github-issue
+  [record]
+  (github/issue record))
+
+(defn ingest-plan
+  [artifact]
+  (kernel/ingest-plan artifact))
