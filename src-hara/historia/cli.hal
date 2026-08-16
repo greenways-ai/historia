@@ -3,7 +3,7 @@
 (def version "0.1.0")
 
 (def usage
-  "Historia 0.1.0\n\nGit-native private history for conversations, code and issue context.\n\nUsage:\n  historia core describe\n\n  historia vault init [--vault <path>]\n  historia vault verify [--vault <path>]\n\n  historia --version\n\nEnvironment:\n  HISTORIA_VAULT     Override the default bare Git vault path.\n")
+  "Historia 0.1.0\n\nGit-native private history for conversations, code and issue context.\n\nUsage:\n  historia repl [--resp] [HARA_REPL_OPTIONS]\n  historia repl --eval FORM\n\n  historia core describe\n\n  historia vault init [--vault <path>]\n  historia vault verify [--vault <path>]\n\n  historia --version\n\nEnvironment:\n  HISTORIA_VAULT              Override the default bare Git vault path.\n  HARA_CLI                    Override the native Hara REPL executable.\n  HISTORIA_REPL_SOURCE_ROOT   Override the generated REPL source overlay.\n")
 
 (defn- error
   [message]
