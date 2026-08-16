@@ -1,7 +1,7 @@
 (ns historia.main
   (:require [hara.cli.application :as application]
             [historia.cli :as cli]
-            [historia.core :as core]
+            [historia.kernel :as kernel]
             [historia.path :as path]
             [historia.vault :as vault]))
 
@@ -15,9 +15,9 @@
   [value]
   (str/join "" [value "\n"]))
 
-(defn- json-result
+(defn- data-result
   [value]
-  (result (line (json/write value)) "" 0))
+  (result (line (str value)) "" 0))
 
 (defn main
   [request]
@@ -28,11 +28,11 @@
       (if (= action :version)
         (result (line cli/version) "" 0)
         (if (= action :core-describe)
-          (json-result (core/descriptor))
+          (data-result kernel/descriptor)
           (if (= action :vault-init)
-            (json-result (vault/init (get parsed :vault)))
+            (data-result (vault/init (get parsed :vault)))
             (if (= action :vault-verify)
-              (json-result (vault/verify (get parsed :vault)))
+              (data-result (vault/verify (get parsed :vault)))
               (result
                ""
                (str/join

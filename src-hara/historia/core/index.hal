@@ -2,8 +2,7 @@
 
 (def schema "historia.index/0-alpha")
 
-(defn descriptor
-  []
+(def descriptor
   {"schema" schema
    "implementation" "memory"
    "authoritative" false

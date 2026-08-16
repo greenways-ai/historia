@@ -1,4 +1,4 @@
-(ns historia.core
+(ns historia.kernel
   (:require [historia.core.analyzer :as analyzer]
             [historia.core.index :as index]
             [historia.provider.github :as github]))
@@ -13,14 +13,13 @@
    "index.write"
    "link.project"])
 
-(defn descriptor
-  []
+(def descriptor
   {"schema" schema
    "version" "0.1.0"
    "stages" stages
-   "providers" [(github/descriptor)]
-   "analyzers" (analyzer/all)
-   "index" (index/descriptor)})
+   "providers" [github/provider]
+   "analyzers" analyzer/descriptors
+   "index" index/descriptor})
 
 (defn create
   []

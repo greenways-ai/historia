@@ -1,5 +1,5 @@
-(ns historia.core-test
-  (:require [historia.core :as core]
+(ns historia.kernel-test
+  (:require [historia.kernel :as kernel]
             [historia.core.analyzer :as analyzer]
             [historia.core.artifact :as artifact]
             [historia.core.index :as index]
@@ -7,8 +7,8 @@
 
 (std.lib.test/print-results
  [(std.lib.test/check
-   "the core advertises a rebuildable memory index"
-   (get (get (core/descriptor) "index") "implementation")
+   "the kernel advertises a rebuildable memory index"
+   (get (get kernel/descriptor "index") "implementation")
    "memory")
   (std.lib.test/check
    "Python resolves to the Python analyser"

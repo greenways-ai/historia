@@ -36,6 +36,12 @@
     "languages" ["hara"]
     "extensions" [".hal"]}})
 
+(def descriptors
+  [(get analyzers :javascript)
+   (get analyzers :python)
+   (get analyzers :clojure)
+   (get analyzers :hara)])
+
 (def analyzer-by-language
   {"javascript" :javascript
    "jsx" :javascript
@@ -45,13 +51,6 @@
    "clojure" :clojure
    "babashka" :clojure
    "hara" :hara})
-
-(defn all
-  []
-  [(get analyzers :javascript)
-   (get analyzers :python)
-   (get analyzers :clojure)
-   (get analyzers :hara)])
 
 (defn for-language
   [language]

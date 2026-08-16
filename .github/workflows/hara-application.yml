@@ -41,21 +41,23 @@ jobs:
 
       - name: Describe the minimal Hara core without Bun
         run: |
-          bin/historia core describe | tee target/hara-application/core.json
-          grep -q 'historia.core/0-alpha' target/hara-application/core.json
-          grep -q '"id":"javascript"' target/hara-application/core.json
-          grep -q '"id":"python"' target/hara-application/core.json
-          grep -q '"id":"clojure"' target/hara-application/core.json
-          grep -q '"id":"hara"' target/hara-application/core.json
-          grep -q '"implementation":"memory"' target/hara-application/core.json
+          bin/historia core describe | tee target/hara-application/core.edn
+          grep -q 'historia.core/0-alpha' target/hara-application/core.edn
+          grep -q 'javascript' target/hara-application/core.edn
+          grep -q 'python' target/hara-application/core.edn
+          grep -q 'clojure' target/hara-application/core.edn
+          grep -q 'hara' target/hara-application/core.edn
+          grep -q 'implementation' target/hara-application/core.edn
+          grep -q 'memory' target/hara-application/core.edn
 
       - name: Initialize and verify a real Git vault without Bun
         run: |
           vault="$RUNNER_TEMP/historia-hara/vault.git"
-          bin/historia vault init --vault "$vault" | tee target/hara-application/vault-init.json
-          bin/historia vault verify --vault "$vault" | tee target/hara-application/vault-verify.json
-          grep -q '"objectFormat"' target/hara-application/vault-init.json
-          grep -q '"ok":true' target/hara-application/vault-verify.json
+          bin/historia vault init --vault "$vault" | tee target/hara-application/vault-init.edn
+          bin/historia vault verify --vault "$vault" | tee target/hara-application/vault-verify.edn
+          grep -q 'objectFormat' target/hara-application/vault-init.edn
+          grep -q 'ok' target/hara-application/vault-verify.edn
+          grep -q 'true' target/hara-application/vault-verify.edn
           test "$(git --git-dir "$vault" rev-parse --is-bare-repository)" = true
 
       - name: Upload Hara application evidence
