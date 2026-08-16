@@ -1,6 +1,7 @@
 (ns historia.main
   (:require [hara.cli.application :as application]
             [historia.cli :as cli]
+            [historia.core :as core]
             [historia.path :as path]
             [historia.vault :as vault]))
 
@@ -26,15 +27,17 @@
       (result cli/usage "" 0)
       (if (= action :version)
         (result (line cli/version) "" 0)
-        (if (= action :vault-init)
-          (json-result (vault/init (get parsed :vault)))
-          (if (= action :vault-verify)
-            (json-result (vault/verify (get parsed :vault)))
-            (result
-             ""
-             (str/join
-              ""
-              ["historia: " (get parsed :message) "\n\n" cli/usage])
-             2)))))))
+        (if (= action :core-describe)
+          (json-result (core/describe))
+          (if (= action :vault-init)
+            (json-result (vault/init (get parsed :vault)))
+            (if (= action :vault-verify)
+              (json-result (vault/verify (get parsed :vault)))
+              (result
+               ""
+               (str/join
+                ""
+                ["historia: " (get parsed :message) "\n\n" cli/usage])
+               2))))))))
 
 (main application/request)

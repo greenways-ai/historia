@@ -1,0 +1,48 @@
+(ns historia.provider.github
+  (:require [historia.core.artifact :as artifact]))
+
+(def provider
+  {"id" "github"
+   "mode" "observation"
+   "artifacts" ["repository" "issue" "comment"]
+   "writesEnabled" false})
+
+(defn describe
+  []
+  provider)
+
+(defn issue-id
+  [repository number]
+  (str/join "" ["github:" repository "#" number]))
+
+(defn- block-id
+  [issue-id suffix]
+  (str/join "" [issue-id "/" suffix]))
+
+(defn issue
+  [record]
+  (let [repository (:repository record)
+        number (:number record)
+        id (issue-id repository number)
+        revision (or (:revision record)
+                     (:updated-at record)
+                     (:observed-at record)
+                     "unversioned")]
+    (artifact/create
+     id
+     "github.issue"
+     {"provider" "github"
+      "repository" repository
+      "number" number
+      "url" (:url record)}
+     revision
+     [(artifact/block
+       (block-id id "title")
+       "title"
+       (:title record)
+       {"format" "plain"})
+      (artifact/block
+       (block-id id "body")
+       "markdown"
+       (:body record)
+       {"format" "github-markdown"})])))

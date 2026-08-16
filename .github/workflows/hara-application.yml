@@ -39,6 +39,16 @@ jobs:
           grep -q 'Historia 0.1.0' target/hara-application/help.txt
           grep -q '^0.1.0$' target/hara-application/version.txt
 
+      - name: Describe the minimal Hara core without Bun
+        run: |
+          bin/historia core describe | tee target/hara-application/core.json
+          grep -q 'historia.core/0-alpha' target/hara-application/core.json
+          grep -q '"id":"javascript"' target/hara-application/core.json
+          grep -q '"id":"python"' target/hara-application/core.json
+          grep -q '"id":"clojure"' target/hara-application/core.json
+          grep -q '"id":"hara"' target/hara-application/core.json
+          grep -q '"implementation":"memory"' target/hara-application/core.json
+
       - name: Initialize and verify a real Git vault without Bun
         run: |
           vault="$RUNNER_TEMP/historia-hara/vault.git"

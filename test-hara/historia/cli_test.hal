@@ -10,6 +10,14 @@
    (:action (cli/parse ["--version"]))
    :version)
   (test-check
+   "the minimal Hara core is discoverable"
+   (:action (cli/parse ["core" "describe"]))
+   :core-describe)
+  (test-check
+   "core describe rejects additional arguments"
+   (:action (cli/parse ["core" "describe" "extra"]))
+   :error)
+  (test-check
    "vault init carries its explicit path"
    (cli/parse ["vault" "init" "--vault" "/tmp/historia.git"])
    {:action :vault-init :vault "/tmp/historia.git"})

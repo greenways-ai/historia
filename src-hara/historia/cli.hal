@@ -3,12 +3,23 @@
 (def version "0.1.0")
 
 (def usage
-  "Historia 0.1.0\n\nGit-native private history for conversations and agent context.\n\nUsage:\n  historia vault init [--vault <path>]\n  historia vault verify [--vault <path>]\n\n  historia --version\n\nEnvironment:\n  HISTORIA_VAULT     Override the default bare Git vault path.\n")
+  "Historia 0.1.0\n\nGit-native private history for conversations, code and issue context.\n\nUsage:\n  historia core describe\n\n  historia vault init [--vault <path>]\n  historia vault verify [--vault <path>]\n\n  historia --version\n\nEnvironment:\n  HISTORIA_VAULT     Override the default bare Git vault path.\n")
 
 (defn- error
   [message]
   {:action :error
    :message message})
+
+(defn- parse-core
+  [arguments]
+  (if (< 1 (count arguments))
+    (let [command (nth arguments 1)]
+      (if (= command "describe")
+        (if (= 2 (count arguments))
+          {:action :core-describe}
+          (error "core describe takes no arguments"))
+        (error (str/join "" ["unknown core command: " command]))))
+    (error "core requires describe")))
 
 (defn- parse-vault-options
   [arguments index options]
@@ -43,13 +54,15 @@
         {:action :help}
         (if (or (= domain "--version") (= domain "-V"))
           {:action :version}
-          (if (= domain "vault")
-            (if (< 1 (count arguments))
-              (let [command (nth arguments 1)]
-                (if (= command "init")
-                  (parse-vault-options arguments 2 {:action :vault-init})
-                  (if (= command "verify")
-                    (parse-vault-options arguments 2 {:action :vault-verify})
-                    (error (str/join "" ["unknown vault command: " command])))))
-              (error "vault requires init or verify"))
-            (error (str/join "" ["unknown command: " domain]))))))))
+          (if (= domain "core")
+            (parse-core arguments)
+            (if (= domain "vault")
+              (if (< 1 (count arguments))
+                (let [command (nth arguments 1)]
+                  (if (= command "init")
+                    (parse-vault-options arguments 2 {:action :vault-init})
+                    (if (= command "verify")
+                      (parse-vault-options arguments 2 {:action :vault-verify})
+                      (error (str/join "" ["unknown vault command: " command])))))
+                (error "vault requires init or verify"))
+              (error (str/join "" ["unknown command: " domain])))))))))
