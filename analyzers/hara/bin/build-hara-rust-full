@@ -3,31 +3,21 @@ set -eu
 
 ANALYZER_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
-HARA_RUNTIME_REV=${HARA_RUNTIME_REV:-dc6f3b4b25e70f4d2abc360cf70e08fa6e95d342}
+HARA_RUNTIME_REV=${HARA_RUNTIME_REV:-agent/whole-wasm-code-analyzer}
 SOURCE_DIR=${HARA_SOURCE_DIR:-$ANALYZER_ROOT/target/hara-runtime}
 BUILD_DIR=${HARA_BUILD_DIR:-$ANALYZER_ROOT/target/hara-build}
 OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ANALYZER_ROOT/target/bin}
 RUNTIME="$OUTPUT_DIR/hara-rust-full"
 COMPAT_DIR="$ANALYZER_ROOT/target/release"
 COMPAT="$COMPAT_DIR/historia-hara-analyzer"
-REVISION_FILE="$ANALYZER_ROOT/target/hara-runtime-revision.txt"
 
 if [ -z "${HARA_SOURCE_DIR:-}" ]; then
   if [ ! -d "$SOURCE_DIR/.git" ]; then
     rm -rf "$SOURCE_DIR"
     git clone --filter=blob:none --no-checkout "$HARA_REPOSITORY" "$SOURCE_DIR"
   fi
-  if ! git -C "$SOURCE_DIR" fetch --depth 1 origin "$HARA_RUNTIME_REV"; then
-    echo "Historia Hara analyser dependency unavailable: $HARA_REPOSITORY@$HARA_RUNTIME_REV" >&2
-    exit 1
-  fi
+  git -C "$SOURCE_DIR" fetch --depth 1 origin "$HARA_RUNTIME_REV"
   git -C "$SOURCE_DIR" checkout --detach --force FETCH_HEAD
-fi
-
-ACTUAL_REVISION=$(git -C "$SOURCE_DIR" rev-parse HEAD)
-if [ "$ACTUAL_REVISION" != "$HARA_RUNTIME_REV" ]; then
-  echo "Historia Hara analyser dependency mismatch: expected $HARA_RUNTIME_REV, got $ACTUAL_REVISION" >&2
-  exit 1
 fi
 
 CARGO_TARGET_DIR="$BUILD_DIR" cargo build \
@@ -38,10 +28,9 @@ CARGO_TARGET_DIR="$BUILD_DIR" cargo build \
   --features whole-wasm \
   --bin hara-rust-full
 
-mkdir -p "$OUTPUT_DIR" "$COMPAT_DIR" "$(dirname "$REVISION_FILE")"
+mkdir -p "$OUTPUT_DIR" "$COMPAT_DIR"
 cp "$BUILD_DIR/release/hara-rust-full" "$RUNTIME"
 chmod +x "$RUNTIME"
-printf '%s\n' "$ACTUAL_REVISION" > "$REVISION_FILE"
 cat > "$COMPAT" <<EOF
 #!/usr/bin/env sh
 exec "$RUNTIME" analyzer "$ANALYZER_ROOT/analyzer.hal"

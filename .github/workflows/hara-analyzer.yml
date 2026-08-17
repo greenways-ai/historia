@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     env:
-      HARA_RUNTIME_REV: dc6f3b4b25e70f4d2abc360cf70e08fa6e95d342
+      HARA_RUNTIME_REV: agent/whole-wasm-code-analyzer
     steps:
       - uses: actions/checkout@v4
 
@@ -31,12 +31,8 @@ jobs:
       - name: Install Historia dependencies
         run: bun install --frozen-lockfile
 
-      - name: Build the immutable Hara-owned analyzer runtime
+      - name: Build the Hara-owned whole-Wasm analyzer runtime
         run: bun run hara:build
-
-      - name: Record the selected Hara runtime revision
-        run: |
-          test "$(cat analyzers/hara/target/hara-runtime-revision.txt)" = "$HARA_RUNTIME_REV"
 
       - name: Smoke-test analyzer startup and first analysis
         shell: bash
@@ -76,7 +72,6 @@ jobs:
             target/clojure-analyzer-benchmarks
             target/hara-startup.stdout
             target/hara-startup.stderr
-            analyzers/hara/target/hara-runtime-revision.txt
           if-no-files-found: ignore
 
       - name: Publish benchmark on the pull request
