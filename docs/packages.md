@@ -7,34 +7,48 @@ packages. The repository root remains the application project.
 
 | Source root | Coordinate | Capabilities | Purpose |
 | --- | --- | --- | --- |
-| `/` | `greenways/historia` | `:file`, `:process` | CLI, vault, native REPL, kernel assembly and integration tests |
+| `/` | `greenways/historia` | `:file`, `:process` | CLI, vault, native REPL, built-in workers, kernel assembly and integration tests |
 | `packages/core` | `greenways/historia-core` | none | Artifact, analyser-description and rebuildable-index contracts |
 
-The root project includes `packages/core/src` as a local source path. This keeps
-development and CI independent of an unpublished registry dependency while the
-core package remains independently checkable and testable.
+The root project declares `greenways/historia-core` and materializes it through
+`packages/core/src` during source development. This keeps CI independent of an
+unpublished registry artifact while exercising the same namespace boundary that
+a registry consumer will use.
 
-Provider packages will be split only after the core package contract and Hara
-registry dependency resolution are stable. In particular, GitHub network access
-does not belong in the capability-free core package.
+A standalone consumer needs only:
 
-## Local validation
-
-```bash
-target/bin/hara --project packages/core check
-target/bin/hara --project packages/core test
-
-target/bin/hara --project . check
-target/bin/hara --project . test
-
-bin/historia repl --eval \
-  '(do (require [historia.repl :as historia]) (historia/describe))'
+```edn
+:project/dependencies {greenways/historia-core "^0.1.0"}
 ```
 
-`historia repl` delegates evaluation to Hara's native REPL. Historia creates a
-disposable source overlay from the declared local module roots because the
-currently pinned native REPL accepts one filesystem root. The overlay contains
-source only, is rebuilt for every launch and is never authoritative.
+`examples/historia-core-consumer` is a capability-free proof project. It uses the
+artifact and index contracts and selects analyser families without depending on
+the Historia executable or obtaining process authority.
+
+## Analyser boundary
+
+`greenways/historia-core` includes the common JSONL request contract and four
+portable analyser descriptors:
+
+| Family | Languages | Core responsibility |
+| --- | --- | --- |
+| JavaScript | JavaScript, JSX, TypeScript, TSX | language selection and request contract |
+| Python | Python | language selection and request contract |
+| Clojure | Clojure, Babashka | language selection and request contract |
+| Hara | Hara | language selection and request contract |
+
+The core descriptors contain no executable commands. The application namespace
+`historia.analyzers` attaches the checked-in workers under `analyzers/` and owns
+the `:process` authority needed to start them. This lets another project select
+only `historia-core` and provide a different worker broker without inheriting
+Historia's application authority.
+
+## Native REPL
+
+`historia repl` delegates directly to Hara's project-aware native REPL. The
+pinned Hara runtime registers every effective `:project/source-paths` namespace
+in the root terminal session and in later RESP sessions. Historia does not copy,
+merge, or generate a second source tree for interactive evaluation.
 
 The REPL is offline by default:
 
@@ -46,6 +60,28 @@ Enable the local RESP listener explicitly:
 
 ```bash
 historia repl --resp
+```
+
+Use deterministic non-interactive evaluation for scripts and smoke tests:
+
+```bash
+historia repl --eval \
+  '(do (require [historia.repl :as historia]) (historia/describe))'
+```
+
+## Local validation
+
+```bash
+target/bin/hara --project packages/core check
+target/bin/hara --project packages/core test
+
+target/bin/hara --project examples/historia-core-consumer check
+target/bin/hara --project examples/historia-core-consumer test
+
+target/bin/hara --project . check
+target/bin/hara --project . test
+
+scripts/check-analyzer-assets
 ```
 
 ## Publication to packages.hara-lang.org

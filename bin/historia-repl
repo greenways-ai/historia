@@ -2,7 +2,6 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-SOURCE_ROOT=${HISTORIA_REPL_SOURCE_ROOT:-$ROOT/target/historia-repl-source}
 RUNTIME=${HARA_CLI:-}
 
 usage() {
@@ -40,13 +39,6 @@ resolve_runtime() {
   RUNTIME="$ROOT/target/bin/hara"
 }
 
-prepare_sources() {
-  rm -rf "$SOURCE_ROOT"
-  mkdir -p "$SOURCE_ROOT"
-  cp -R "$ROOT/packages/core/src/." "$SOURCE_ROOT/"
-  cp -R "$ROOT/src-hara/." "$SOURCE_ROOT/"
-}
-
 case "${1:-}" in
   --help|-h)
     usage
@@ -59,10 +51,9 @@ case "${1:-}" in
       exit 2
     fi
     resolve_runtime
-    prepare_sources
     exec "$RUNTIME" \
       --project "$ROOT" \
-      --root "$SOURCE_ROOT" \
+      --root "$ROOT" \
       --allow-file \
       --allow-process \
       eval "$1"
@@ -74,10 +65,9 @@ case "${1:-}" in
       exit 2
     fi
     resolve_runtime
-    prepare_sources
     exec "$RUNTIME" \
       --project "$ROOT" \
-      --root "$SOURCE_ROOT" \
+      --root "$ROOT" \
       --allow-file \
       --allow-process \
       eval "$SOURCE"
@@ -85,10 +75,9 @@ case "${1:-}" in
   --resp)
     shift
     resolve_runtime
-    prepare_sources
     exec "$RUNTIME" \
       --project "$ROOT" \
-      --root "$SOURCE_ROOT" \
+      --root "$ROOT" \
       --allow-file \
       --allow-process \
       "$@" \
@@ -96,10 +85,9 @@ case "${1:-}" in
     ;;
   *)
     resolve_runtime
-    prepare_sources
     exec "$RUNTIME" \
       --project "$ROOT" \
-      --root "$SOURCE_ROOT" \
+      --root "$ROOT" \
       --allow-file \
       --allow-process \
       --offline \
