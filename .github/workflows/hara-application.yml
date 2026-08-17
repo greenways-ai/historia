@@ -44,6 +44,9 @@ jobs:
           target/bin/hara --project . check
           target/bin/hara --project . test
 
+      - name: Verify all built-in analyser assets
+        run: scripts/check-analyzer-assets
+
       - name: Exercise help and version without Bun
         run: |
           mkdir -p target/hara-application

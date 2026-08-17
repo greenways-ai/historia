@@ -1,0 +1,32 @@
+(ns historia.analyzers-test
+  (:require [historia.analyzers :as analyzers]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the application registers all four analyser workers"
+   (count analyzers/descriptors)
+   4)
+  (std.lib.test/check
+   "TypeScript uses the JavaScript analyser worker"
+   (analyzers/worker-command "typescript")
+   ["bun" "analyzers/typescript/src/analyzer.js"])
+  (std.lib.test/check
+   "Python uses the Python analyser worker"
+   (analyzers/worker-command "python")
+   ["python3" "analyzers/python/src/analyzer.py"])
+  (std.lib.test/check
+   "Clojure uses the Babashka analyser worker"
+   (analyzers/worker-command "clojure")
+   ["bb"
+    "-cp"
+    "analyzers/clojure/src"
+    "-m"
+    "greenways-historian.analyzer"])
+  (std.lib.test/check
+   "Hara uses the Hara analyser launcher"
+   (analyzers/worker-command "hara")
+   ["analyzers/hara/bin/historia-hara-analyzer"])
+  (std.lib.test/check
+   "unknown languages acquire no process command"
+   (analyzers/worker-command "unknown")
+   nil)])

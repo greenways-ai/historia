@@ -1,6 +1,6 @@
 (ns historia.repl
-  (:require [historia.kernel :as kernel]
-            [historia.core.analyzer :as analyzer]
+  (:require [historia.analyzers :as analyzers]
+            [historia.kernel :as kernel]
             [historia.core.index :as index]
             [historia.provider.github :as github]))
 
@@ -25,7 +25,7 @@
 
 (defn analyzer
   [language]
-  (analyzer/for-language language))
+  (analyzers/for-language language))
 
 (defn github-issue
   [record]

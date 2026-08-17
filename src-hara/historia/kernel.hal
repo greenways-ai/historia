@@ -1,5 +1,5 @@
 (ns historia.kernel
-  (:require [historia.core.analyzer :as analyzer]
+  (:require [historia.analyzers :as analyzers]
             [historia.core.index :as index]
             [historia.provider.github :as github]))
 
@@ -18,7 +18,7 @@
    "version" "0.1.0"
    "stages" stages
    "providers" [github/provider]
-   "analyzers" analyzer/descriptors
+   "analyzers" analyzers/descriptors
    "index" index/descriptor})
 
 (defn create
