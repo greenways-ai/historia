@@ -1,0 +1,71 @@
+(ns historia.analyzers
+  (:require [historia.core.analyzer :as core]))
+
+(def registry-schema "historia.analyzer.registry/0-alpha")
+
+(defn- process-runtime
+  [entry command]
+  {"kind" "process"
+   "entry" entry
+   "command" command
+   "packaging" "historia-application"})
+
+(defn- register
+  [descriptor entry command]
+  (assoc descriptor "runtime" (process-runtime entry command)))
+
+(def javascript
+  (register
+   core/javascript
+   "analyzers/typescript/src/analyzer.js"
+   ["bun" "analyzers/typescript/src/analyzer.js"]))
+
+(def python
+  (register
+   core/python
+   "analyzers/python/src/analyzer.py"
+   ["python3" "analyzers/python/src/analyzer.py"]))
+
+(def clojure
+  (register
+   core/clojure
+   "analyzers/clojure/src/greenways_historian/analyzer.clj"
+   ["bb"
+    "-cp"
+    "analyzers/clojure/src"
+    "-m"
+    "greenways-historian.analyzer"]))
+
+(def hara
+  (register
+   core/hara
+   "analyzers/hara/analyzer.hal"
+   ["analyzers/hara/bin/historia-hara-analyzer"]))
+
+(def descriptors
+  [javascript python clojure hara])
+
+(def analyzer-by-language
+  {"javascript" javascript
+   "jsx" javascript
+   "typescript" javascript
+   "tsx" javascript
+   "python" python
+   "clojure" clojure
+   "babashka" clojure
+   "hara" hara})
+
+(def descriptor
+  {"schema" registry-schema
+   "analyzers" descriptors})
+
+(defn for-language
+  [language]
+  (get analyzer-by-language language))
+
+(defn worker-command
+  [language]
+  (let [analyzer (for-language language)]
+    (if analyzer
+      (get (get analyzer "runtime") "command")
+      nil)))

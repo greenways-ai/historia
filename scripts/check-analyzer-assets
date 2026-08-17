@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+
+require_file() {
+  path=$1
+  if [ ! -f "$ROOT/$path" ]; then
+    echo "missing Historia analyser asset: $path" >&2
+    exit 1
+  fi
+}
+
+require_executable() {
+  path=$1
+  require_file "$path"
+  if [ ! -x "$ROOT/$path" ]; then
+    echo "Historia analyser launcher is not executable: $path" >&2
+    exit 1
+  fi
+}
+
+require_file analyzers/typescript/src/analyzer.js
+require_file analyzers/typescript/src/normalize.js
+require_file analyzers/python/src/analyzer.py
+require_file analyzers/clojure/src/greenways_historian/analyzer.clj
+require_file analyzers/clojure/src/greenways_historian/kondo_analyzer.clj
+require_file analyzers/hara/analyzer.hal
+require_executable analyzers/hara/bin/historia-hara-analyzer
+
+printf '%s\n' \
+  javascript/typescript \
+  python \
+  clojure/babashka \
+  hara
