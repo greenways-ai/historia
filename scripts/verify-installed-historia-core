@@ -1,0 +1,116 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+HARA_CLI=${HARA_CLI:-$ROOT/target/bin/hara}
+WORK_ROOT=${HISTORIA_CORE_VERIFY_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/historia-core-installed.XXXXXX")}
+DIST_ROOT="$WORK_ROOT/dist"
+CONSUMER="$WORK_ROOT/consumer"
+ARCHIVE="$WORK_ROOT/greenways-historia-core-0.1.0.harp"
+KEEP=${HISTORIA_CORE_VERIFY_KEEP:-0}
+
+cleanup() {
+  if [ "$KEEP" != 1 ]; then
+    rm -rf "$WORK_ROOT"
+  fi
+}
+trap cleanup EXIT HUP INT TERM
+
+if [ ! -x "$HARA_CLI" ]; then
+  echo "installed historia-core verification requires an executable Hara CLI: $HARA_CLI" >&2
+  exit 1
+fi
+
+case "$CONSUMER" in
+  "$ROOT"|"$ROOT"/*)
+    echo "installed historia-core consumer must be outside the Historia checkout" >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p "$CONSUMER/src/example" "$CONSUMER/test/example"
+cat > "$CONSUMER/project.edn" <<'EOF'
+{:hara/type :project
+ :hara/version "1.0.0"
+ :project/id example/installed-historia-core
+ :project/version "0.1.0"
+ :project/source-paths ["src"]
+ :project/test-paths ["test"]
+ :project/extension-paths []
+ :project/main example.main
+ :project/capabilities #{}
+ :project/dependencies
+ {greenways/historia-core {:version "^0.1.0"}}}
+EOF
+
+cat > "$CONSUMER/src/example/main.hal" <<'EOF'
+(ns example.main
+  (:require [historia.core.analyzer :as analyzer]
+            [historia.core.artifact :as artifact]
+            [historia.core.index :as index]))
+
+(defn describe
+  []
+  {"dependency" "greenways/historia-core"
+   "analyzers" (count analyzer/descriptors)
+   "haraAnalyzer" (get (analyzer/for-language "hara") "id")
+   "artifactSchema" artifact/artifact-schema
+   "indexSchema" index/schema})
+EOF
+
+cat > "$CONSUMER/test/example/main_test.hal" <<'EOF'
+(ns example.main-test
+  (:require [example.main :as main]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the installed package is active by coordinate alone"
+   (main/describe)
+   {"dependency" "greenways/historia-core"
+    "analyzers" 4
+    "haraAnalyzer" "hara"
+    "artifactSchema" "historia.artifact/0-alpha"
+    "indexSchema" "historia.index/0-alpha"})])
+EOF
+
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" package build \
+  "$ROOT/packages/core" \
+  --output "$ARCHIVE"
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" package install "$ARCHIVE"
+
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" --project "$CONSUMER" check
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" --project "$CONSUMER" test
+
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" --project "$CONSUMER" eval \
+  '(ns example.probe (:require [example.main :as main])) (main/describe)' \
+  | tee "$WORK_ROOT/eval.edn"
+grep -q 'greenways/historia-core' "$WORK_ROOT/eval.edn"
+grep -q 'haraAnalyzer.*hara' "$WORK_ROOT/eval.edn"
+
+printf '%s\n' \
+  '(ns example.repl (:require [example.main :as main]))' \
+  '(main/describe)' \
+  '/quit' \
+  | HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" \
+      --project "$CONSUMER" \
+      --offline \
+      --no-splash \
+      --no-history \
+      repl \
+  | tee "$WORK_ROOT/repl.txt"
+grep -q 'greenways/historia-core' "$WORK_ROOT/repl.txt"
+
+find "$DIST_ROOT/packages" -type f -name '0.1.0.edn' -delete
+if HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" --project "$CONSUMER" eval \
+    '(require [historia.core.analyzer])' \
+    >"$WORK_ROOT/missing.stdout" 2>"$WORK_ROOT/missing.stderr"; then
+  echo "consumer unexpectedly resolved historia-core after registration removal" >&2
+  exit 1
+fi
+grep -q 'no installed version' "$WORK_ROOT/missing.stderr"
+
+printf '%s\n' \
+  "archive=$ARCHIVE" \
+  "distribution=$DIST_ROOT" \
+  "consumer=$CONSUMER" \
+  "status=verified"

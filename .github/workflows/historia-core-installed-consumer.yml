@@ -1,0 +1,40 @@
+name: Installed historia-core consumer
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installed-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HARA_APPLICATION_REV: d364fa847e3d61bffe1a0095852730f8d8782938
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build the complete Hara substrate
+        run: sh bin/build-hara-app
+
+      - name: Verify the immutable Hara revision
+        run: test "$(cat target/bin/hara-application-revision.txt)" = "$HARA_APPLICATION_REV"
+
+      - name: Build, install and consume historia-core by coordinate alone
+        env:
+          HISTORIA_CORE_VERIFY_ROOT: ${{ runner.temp }}/historia-core-installed
+          HISTORIA_CORE_VERIFY_KEEP: 1
+        run: sh scripts/verify-installed-historia-core
+
+      - name: Upload package-consumer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: historia-core-installed-consumer
+          path: ${{ runner.temp }}/historia-core-installed
+          if-no-files-found: ignore
