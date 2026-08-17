@@ -3,8 +3,8 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
-# hara-lang/hara#698: project-aware native REPL resource registration.
-HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-61d571c3e2205a318cbaf2ddac402beb6bcb0a02}
+# hara-lang/hara#701: installed packages, project-aware REPL, and hara-app.
+HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-d364fa847e3d61bffe1a0095852730f8d8782938}
 SOURCE_DIR=${HARA_SOURCE_DIR:-$ROOT/target/hara-runtime}
 BUILD_DIR=${HARA_BUILD_DIR:-$ROOT/target/hara-build}
 OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ROOT/target/bin}
