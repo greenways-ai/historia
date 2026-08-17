@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      HARA_APPLICATION_REV: 61d571c3e2205a318cbaf2ddac402beb6bcb0a02
+      HARA_APPLICATION_REV: d364fa847e3d61bffe1a0095852730f8d8782938
     steps:
       - uses: actions/checkout@v4
 
