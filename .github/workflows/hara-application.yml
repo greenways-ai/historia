@@ -33,6 +33,12 @@ jobs:
           target/bin/hara --project packages/core check
           target/bin/hara --project packages/core test
 
+      - name: Prove a capability-free source consumer
+        run: |
+          scripts/materialize-historia-core-consumer
+          target/bin/hara --project examples/historia-core-consumer check
+          target/bin/hara --project examples/historia-core-consumer test
+
       - name: Check and test the Historia application project
         run: |
           target/bin/hara --project . check
