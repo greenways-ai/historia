@@ -3,19 +3,29 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
-# hara-lang/hara#386. Update this pin when the Hara PR moves.
-HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-52a015ecea0d8d5a2de35323095ae48b7a0eb594}
+# hara-lang/hara#698: project-aware native REPL resource registration.
+HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-61d571c3e2205a318cbaf2ddac402beb6bcb0a02}
 SOURCE_DIR=${HARA_SOURCE_DIR:-$ROOT/target/hara-runtime}
 BUILD_DIR=${HARA_BUILD_DIR:-$ROOT/target/hara-build}
 OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ROOT/target/bin}
+REVISION_FILE="$OUTPUT_DIR/hara-application-revision.txt"
 
 if [ -z "${HARA_SOURCE_DIR:-}" ]; then
   if [ ! -d "$SOURCE_DIR/.git" ]; then
     rm -rf "$SOURCE_DIR"
     git clone --filter=blob:none --no-checkout "$HARA_REPOSITORY" "$SOURCE_DIR"
   fi
-  git -C "$SOURCE_DIR" fetch --depth 1 origin "$HARA_APPLICATION_REV"
+  if ! git -C "$SOURCE_DIR" fetch --depth 1 origin "$HARA_APPLICATION_REV"; then
+    echo "Historia Hara application dependency unavailable: $HARA_REPOSITORY@$HARA_APPLICATION_REV" >&2
+    exit 1
+  fi
   git -C "$SOURCE_DIR" checkout --detach --force FETCH_HEAD
+fi
+
+ACTUAL_REVISION=$(git -C "$SOURCE_DIR" rev-parse HEAD)
+if [ "$ACTUAL_REVISION" != "$HARA_APPLICATION_REV" ]; then
+  echo "Historia Hara application dependency mismatch: expected $HARA_APPLICATION_REV, got $ACTUAL_REVISION" >&2
+  exit 1
 fi
 
 CARGO_TARGET_DIR="$BUILD_DIR" cargo build \
@@ -30,4 +40,5 @@ mkdir -p "$OUTPUT_DIR"
 cp "$BUILD_DIR/release/hara" "$OUTPUT_DIR/hara"
 cp "$BUILD_DIR/release/hara-app" "$OUTPUT_DIR/hara-app"
 chmod +x "$OUTPUT_DIR/hara" "$OUTPUT_DIR/hara-app"
+printf '%s\n' "$ACTUAL_REVISION" > "$REVISION_FILE"
 printf '%s\n' "$OUTPUT_DIR/hara-app"

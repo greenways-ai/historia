@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      HARA_APPLICATION_REV: 52a015ecea0d8d5a2de35323095ae48b7a0eb594
+      HARA_APPLICATION_REV: 61d571c3e2205a318cbaf2ddac402beb6bcb0a02
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +21,9 @@ jobs:
 
       - name: Build the Hara application runtime
         run: sh bin/build-hara-app
+
+      - name: Verify the immutable Hara application revision
+        run: test "$(cat target/bin/hara-application-revision.txt)" = "$HARA_APPLICATION_REV"
 
       - name: Test the generic Hara application boundary
         run: |
@@ -56,12 +59,10 @@ jobs:
           grep -q 'historia repl' target/hara-application/help.txt
           grep -q '^0.1.0$' target/hara-application/version.txt
 
-      # PR #74 merged the REPL surface before Hara could register project
-      # sources in native REPL sessions. Keep the regression visible while
-      # issue #77 and hara-lang/hara#691 restore it as a blocking gate.
-      - name: Exercise provisional native Historia REPL without Bun
-        continue-on-error: true
+      - name: Exercise the native Historia REPL without Bun
         run: |
+          test ! -e target/historia-repl-source
+
           bin/historia repl --eval \
             '(do (require [historia.repl :as historia]) (historia/describe))' \
             | tee target/hara-application/repl-eval.edn
@@ -74,6 +75,8 @@ jobs:
             | bin/historia repl --no-splash --no-history \
             | tee target/hara-application/repl-plain.txt
           grep -q 'historia.core/0-alpha' target/hara-application/repl-plain.txt
+
+          test ! -e target/historia-repl-source
 
       - name: Describe the minimal Hara core without Bun
         run: |
