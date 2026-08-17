@@ -9,3 +9,4 @@ node_modules/
 /.netlify/
 /analyzers/hara/target/
 /target/
+/examples/historia-core-consumer/target/

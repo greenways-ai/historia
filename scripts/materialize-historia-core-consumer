@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+DEST="$ROOT/examples/historia-core-consumer/target/historia-core"
+
+rm -rf "$DEST"
+mkdir -p "$DEST"
+cp -R "$ROOT/packages/core/src/." "$DEST/"
+
+printf '%s\n' "$DEST"
