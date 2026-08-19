@@ -1,0 +1,34 @@
+(ns historia.core.source)
+
+(def blob-schema "historia.blob-reference/0-alpha")
+(def document-schema "historia.source-document/0-alpha")
+(def anchor-schema "historia.source-anchor/0-alpha")
+
+(defn blob
+  [algorithm digest byte-size media-type locator]
+  {"schema" blob-schema
+   "algorithm" algorithm
+   "digest" digest
+   "byteSize" byte-size
+   "mediaType" media-type
+   "locator" (or locator {})})
+
+(defn document
+  [id kind provider-id remote-id revision observed-at blob-reference attributes]
+  {"schema" document-schema
+   "id" id
+   "kind" kind
+   "providerId" provider-id
+   "remoteId" remote-id
+   "revision" revision
+   "observedAt" observed-at
+   "blob" blob-reference
+   "attributes" (or attributes {})})
+
+(defn anchor
+  [document-id byte-start byte-end line-start line-end locator]
+  {"schema" anchor-schema
+   "documentId" document-id
+   "byteRange" [byte-start byte-end]
+   "lineRange" [line-start line-end]
+   "locator" (or locator {})})

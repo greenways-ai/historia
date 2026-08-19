@@ -1,6 +1,8 @@
 (ns historia.kernel
   (:require [historia.analyzers :as analyzers]
             [historia.core.index :as index]
+            [historia.core.provider :as provider]
+            [historia.core.source :as source]
             [historia.provider.github :as github]))
 
 (def schema "historia.core/0-alpha")
@@ -8,6 +10,7 @@
 
 (def stages
   ["provider.observe"
+   "source.archive"
    "artifact.normalize"
    "analysis.dispatch"
    "index.write"
@@ -17,6 +20,11 @@
   {"schema" schema
    "version" "0.1.0"
    "stages" stages
+   "source" {"blobSchema" source/blob-schema
+             "documentSchema" source/document-schema
+             "anchorSchema" source/anchor-schema}
+   "providerRegistry" {"schema" provider/registry-schema
+                       "providers" {"github" github/provider}}
    "providers" [github/provider]
    "analyzers" analyzers/descriptors
    "index" index/descriptor})
@@ -24,6 +32,9 @@
 (defn create
   []
   {"schema" schema
+   "providers" (provider/register
+                (provider/create-registry)
+                github/provider)
    "index" (index/create)})
 
 (defn ingest-plan

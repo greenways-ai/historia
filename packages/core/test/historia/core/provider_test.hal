@@ -1,0 +1,107 @@
+(ns historia.core.provider-test
+  (:require [historia.core.provider :as provider]
+            [historia.core.source :as source]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "providers register and resolve by stable ID"
+   (get
+    (provider/resolve
+     (provider/register
+      (provider/create-registry)
+      (provider/descriptor
+       "openai-export"
+       "0-alpha"
+       ["discover" "pull" "status"]
+       ["openai.export" "openai.conversation"]
+       ["conversation" "message"]
+       {"readOnly" true}))
+     "openai-export")
+    "id")
+   "openai-export")
+  (std.lib.test/check
+   "re-registering an ID replaces only that descriptor"
+   (get
+    (provider/resolve
+     (provider/register
+      (provider/register
+       (provider/create-registry)
+       (provider/descriptor
+        "openai-export"
+        "0-alpha"
+        ["pull"]
+        ["openai.export"]
+        ["conversation"]
+        {}))
+      (provider/descriptor
+       "openai-export"
+       "1-alpha"
+       ["discover" "pull"]
+       ["openai.export"]
+       ["conversation"]
+       {}))
+     "openai-export")
+    "revision")
+   "1-alpha")
+  (std.lib.test/check
+   "registry counts remain deterministic after replacement"
+   (provider/counts
+    (provider/register
+     (provider/register
+      (provider/create-registry)
+      (provider/descriptor
+       "openai-export"
+       "0-alpha"
+       ["pull"]
+       ["openai.export"]
+       ["conversation"]
+       {}))
+     (provider/descriptor
+      "openai-export"
+      "1-alpha"
+      ["discover" "pull"]
+      ["openai.export"]
+      ["conversation"]
+      {})))
+   {"providers" 1})
+  (std.lib.test/check
+   "provider requests retain operation and checkpoint"
+   (provider/request
+    "request-1"
+    "openai-export"
+    "pull"
+    {"cursor" "page-1"}
+    {"sourceKey" "personal"})
+   {"schema" "historia.provider-request/0-alpha"
+    "requestId" "request-1"
+    "providerId" "openai-export"
+    "operation" "pull"
+    "checkpoint" {"cursor" "page-1"}
+    "options" {"sourceKey" "personal"}})
+  (std.lib.test/check
+   "provider results retain source documents and completeness evidence"
+   (get
+    (provider/result
+     "request-1"
+     "openai-export"
+     "pull"
+     [(source/document
+       "source:openai:conversation-1:revision-1"
+       "openai.conversation"
+       "openai-export"
+       "conversation-1"
+       "revision-1"
+       "2026-08-19T11:00:00Z"
+       (source/blob
+        "sha256"
+        "f00d"
+        128
+        "application/json"
+        {})
+       {})]
+     {"cursor" "page-2"}
+     {"claimed" true
+      "evidence" "official-export"}
+     [])
+    "checkpoint")
+   {"cursor" "page-2"})])
