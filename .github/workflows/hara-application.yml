@@ -35,31 +35,31 @@ jobs:
         run: |
           mkdir -p target/hara-application
           test "$(target/bin/hara-lite --version)" = 'hara lite 0.1.6'
-          test "$(target/bin/hara-lite --project packages/core eval '(+ 19 23)')" = '42'
-          target/bin/hara-lite --project packages/core eval \
+          test "$(target/bin/hara-lite --project "$GITHUB_WORKSPACE/packages/core" eval '(+ 19 23)')" = '42'
+          target/bin/hara-lite --project "$GITHUB_WORKSPACE/packages/core" eval \
             '(do (require [historia.core.provider :as provider]) (provider/counts (provider/create-registry)))' \
             | tee target/hara-application/lite-core.edn
           grep -q '"providers" 0' target/hara-application/lite-core.edn
-          target/bin/hara-lite --project . eval \
+          target/bin/hara-lite --project "$GITHUB_WORKSPACE" eval \
             '(do (require [historia.kernel :as kernel]) (get kernel/descriptor "schema"))' \
             | tee target/hara-application/lite-application.edn
           grep -q 'historia.core/0-alpha' target/hara-application/lite-application.edn
 
       - name: Check and test the capability-free core package
         run: |
-          target/bin/hara --project packages/core check
-          target/bin/hara --project packages/core test
+          target/bin/hara --project "$GITHUB_WORKSPACE/packages/core" check
+          target/bin/hara --project "$GITHUB_WORKSPACE/packages/core" test
 
       - name: Prove a capability-free source consumer
         run: |
           scripts/materialize-historia-core-consumer
-          target/bin/hara --project examples/historia-core-consumer check
-          target/bin/hara --project examples/historia-core-consumer test
+          target/bin/hara --project "$GITHUB_WORKSPACE/examples/historia-core-consumer" check
+          target/bin/hara --project "$GITHUB_WORKSPACE/examples/historia-core-consumer" test
 
       - name: Check and test the Historia application project
         run: |
-          target/bin/hara --project . check
-          target/bin/hara --project . test
+          target/bin/hara --project "$GITHUB_WORKSPACE" check
+          target/bin/hara --project "$GITHUB_WORKSPACE" test
 
       - name: Verify all built-in analyser assets
         run: scripts/check-analyzer-assets
