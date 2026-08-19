@@ -11,9 +11,9 @@ permissions:
 jobs:
   installed-consumer:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     env:
-      HARA_APPLICATION_REV: d364fa847e3d61bffe1a0095852730f8d8782938
+      HARA_APPLICATION_REV: 2acd20cb5d1b0e1fb9d93496eb836c1bcbfd61da
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +24,12 @@ jobs:
 
       - name: Verify the immutable Hara revision
         run: test "$(cat target/bin/hara-application-revision.txt)" = "$HARA_APPLICATION_REV"
+
+      - name: Verify the dependency-light runtime bundle
+        run: |
+          test "$(target/bin/hara-lite --version)" = 'hara lite 0.1.6'
+          test -f target/share/hara-lite/project.edn
+          test -d target/share/hara-lite/lib
 
       - name: Build, install and consume historia-core by coordinate alone
         env:

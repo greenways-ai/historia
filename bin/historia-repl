@@ -17,6 +17,9 @@ The default REPL is offline. Use --resp to start Hara's local RESP listener.
 Other Hara terminal options are passed through, including --history,
 --no-history, --no-splash, --no-color, --host and --port.
 
+Historia prefers the dependency-light hara-lite runtime. Set HARA_CLI to select
+another compatible native Hara CLI explicitly.
+
 Inside the REPL:
   (require [historia.repl :as historia])
   (historia/describe)
@@ -24,6 +27,14 @@ EOF
 }
 
 resolve_runtime() {
+  if [ -n "$RUNTIME" ]; then
+    return
+  fi
+  if [ -x "$ROOT/target/bin/hara-lite" ]; then
+    RUNTIME="$ROOT/target/bin/hara-lite"
+    return
+  fi
+  RUNTIME=$(command -v hara-lite || true)
   if [ -n "$RUNTIME" ]; then
     return
   fi
@@ -36,7 +47,7 @@ resolve_runtime() {
     return
   fi
   sh "$ROOT/bin/build-hara-app" >/dev/null
-  RUNTIME="$ROOT/target/bin/hara"
+  RUNTIME="$ROOT/target/bin/hara-lite"
 }
 
 case "${1:-}" in
