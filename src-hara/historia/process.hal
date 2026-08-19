@@ -1,21 +1,53 @@
 (ns historia.process)
 
-(defn run
-  [argv]
-  (let [process (os/spawn argv)
-        values (deref
+(defn- collect
+  [process argv]
+  (let [values (deref
                 (promise/all
                  [(os/process-stdout process)
                   (os/process-stderr process)
-                  (os/process-wait process)]))]
+                  (os/process-wait process)]))
+        stdout-bytes (nth values 0)
+        stderr-bytes (nth values 1)]
     {:argv argv
      :exit (nth values 2)
-     :stdout (str/decode-utf8 (nth values 0))
-     :stderr (str/decode-utf8 (nth values 1))}))
+     :stdout-bytes stdout-bytes
+     :stderr-bytes stderr-bytes
+     :stdout (str/decode-utf8 stdout-bytes)
+     :stderr (str/decode-utf8 stderr-bytes)}))
+
+(defn run
+  [argv]
+  (collect (os/spawn argv) argv))
+
+(defn run-input
+  [argv input]
+  (let [process (os/spawn argv)
+        bytes (if (string? input)
+                (str/encode-utf8 input)
+                input)]
+    (os/process-write process bytes)
+    (os/process-close-input process)
+    (collect process argv)))
 
 (defn run!
   [argv]
   (let [result (run argv)]
+    (if (= 0 (:exit result))
+      result
+      (throw
+       (ex-info
+        (str/join
+         ""
+         ["command failed ("
+          (:exit result)
+          "): "
+          (str/join " " argv)])
+        result)))))
+
+(defn run-input!
+  [argv input]
+  (let [result (run-input argv input)]
     (if (= 0 (:exit result))
       result
       (throw

@@ -1,0 +1,25 @@
+(ns historia.provider.receipt)
+
+(def schema "historia.acquisition-receipt/0-alpha")
+
+(defn create
+  [request result documents previous-provider-commit]
+  {"schema" schema
+   "request" request
+   "result" result
+   "documents" (or documents [])
+   "checkpoint"
+   {"previous" (get request "checkpoint")
+    "accepted" (get result "checkpoint")}
+   "completeness" (or (get result "completeness")
+                       {"claimed" false})
+   "warnings" (or (get result "warnings") [])
+   "previousProviderCommit" previous-provider-commit})
+
+(defn request-matches?
+  [receipt request]
+  (= (get receipt "request") request))
+
+(defn accepted-checkpoint
+  [receipt]
+  (get (get receipt "checkpoint") "accepted"))
