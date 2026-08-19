@@ -1,0 +1,166 @@
+(ns historia.source-archive-test
+  (:require [historia.core.provider :as provider]
+            [historia.path :as path]
+            [historia.process :as process]
+            [historia.provider.observation :as observation]
+            [historia.source.archive :as archive]
+            [historia.vault :as vault]))
+
+(def test-root
+  (path/resolve-input "target/provider-archive-test"))
+
+(def test-vault
+  (str/join "" [test-root "/vault.git"]))
+
+(defn reset-vault!
+  []
+  (process/run ["rm" "-rf" test-root])
+  (vault/init test-vault))
+
+(def request-one
+  (provider/request
+   "archive-request-1"
+   "fixture"
+   "pull"
+   nil
+   {"source" "fixture"}))
+
+(def result-one
+  (observation/result
+   request-one
+   [(observation/observation
+     "fixture:document-1:revision-1"
+     "fixture.document"
+     "document-1"
+     "revision-1"
+     "2026-08-19T12:00:00Z"
+     "application/json"
+     "{\"answer\":42}"
+     {"title" "First fixture"})]
+   {"generation" 1
+    "cursor" "document-1"}
+   {"claimed" true
+    "evidence" "fixture-page"}
+   []))
+
+(def request-two
+  (provider/request
+   "archive-request-2"
+   "fixture"
+   "pull"
+   {"generation" 1
+    "cursor" "document-1"}
+   {"source" "fixture"}))
+
+(def result-two
+  (observation/result
+   request-two
+   [(observation/observation
+     "fixture:document-2:revision-1"
+     "fixture.document"
+     "document-2"
+     "revision-1"
+     "2026-08-19T12:01:00Z"
+     "text/plain"
+     "second document"
+     {"title" "Second fixture"})]
+   {"generation" 2
+    "cursor" "document-2"}
+   {"claimed" true
+    "evidence" "fixture-page"}
+   []))
+
+(defn fails?
+  [function]
+  (try
+    (function)
+    false
+    (catch Throwable error
+      true)))
+
+(def initialized (reset-vault!))
+(def first-acquisition
+  (archive/acquire test-vault request-one result-one))
+(def duplicate-acquisition
+  (archive/acquire test-vault request-one result-one))
+(def second-acquisition
+  (archive/acquire test-vault request-two result-two))
+
+(def first-document
+  (nth
+   (get (get first-acquisition "result") "documents")
+   0))
+
+(def first-object
+  (get (get first-document "blob") "digest"))
+
+[(test-check
+  "source bytes are written to the Git object database"
+  (vault/read-blob test-vault first-object)
+  "{\"answer\":42}")
+ (test-check
+  "source documents retain provider identity after archival"
+  (get first-document "providerId")
+  "fixture")
+ (test-check
+  "acquisition receipts retain accepted checkpoints"
+  (get
+   (get
+    (get first-acquisition "receipt")
+    "checkpoint")
+   "accepted")
+  {"generation" 1
+   "cursor" "document-1"})
+ (test-check
+  "duplicate request IDs resolve to the existing acquisition"
+  (get duplicate-acquisition "commit")
+  (get first-acquisition "commit"))
+ (test-check
+  "duplicate acquisitions are explicitly idempotent"
+  (get duplicate-acquisition "idempotent")
+  true)
+ (test-check
+  "provider receipts form a provider-specific chain"
+  (get
+   (get second-acquisition "receipt")
+   "previousProviderCommit")
+  (get first-acquisition "commit"))
+ (test-check
+  "the global acquisition head advances atomically"
+  (vault/ref-value test-vault archive/acquisition-head)
+  (get second-acquisition "commit"))
+ (test-check
+  "stale provider checkpoints fail closed"
+  (fails?
+   (fn []
+     (let [stale-request
+           (provider/request
+            "archive-request-stale"
+            "fixture"
+            "pull"
+            {"generation" 0
+             "cursor" "start"}
+            {})
+           stale-result
+           (observation/result
+            stale-request
+            []
+            {"generation" 1
+             "cursor" "document-1"}
+            {"claimed" false}
+            [])]
+       (archive/acquire
+        test-vault
+        stale-request
+        stale-result))))
+  true)
+ (test-check
+  "the resulting bare Git vault verifies cleanly"
+  (get (vault/verify test-vault) "ok")
+  true)
+ (test-check
+  "archive fixtures clean up their working directory"
+  (do
+    (process/run ["rm" "-rf" test-root])
+    true)
+  true)]

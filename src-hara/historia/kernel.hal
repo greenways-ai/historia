@@ -3,6 +3,7 @@
             [historia.core.index :as index]
             [historia.core.provider :as provider]
             [historia.core.source :as source]
+            [historia.provider.broker :as broker]
             [historia.provider.github :as github]))
 
 (def schema "historia.core/0-alpha")
@@ -25,17 +26,21 @@
              "anchorSchema" source/anchor-schema}
    "providerRegistry" {"schema" provider/registry-schema
                        "providers" {"github" github/provider}}
+   "providerBroker" broker/descriptor
    "providers" [github/provider]
    "analyzers" analyzers/descriptors
    "index" index/descriptor})
 
 (defn create
   []
-  {"schema" schema
-   "providers" (provider/register
-                (provider/create-registry)
-                github/provider)
-   "index" (index/create)})
+  (let [providers
+        (provider/register
+         (provider/create-registry)
+         github/provider)]
+    {"schema" schema
+     "providers" providers
+     "broker" (broker/create providers)
+     "index" (index/create)}))
 
 (defn ingest-plan
   [artifact]
