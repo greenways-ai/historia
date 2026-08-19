@@ -94,74 +94,73 @@
 (def first-object
   (get (get first-document "blob") "digest"))
 
-(std.lib.test/print-results
- [(std.lib.test/check
-   "source bytes are written to the Git object database"
-   (vault/read-blob test-vault first-object)
-   "{\"answer\":42}")
-  (std.lib.test/check
-   "source documents retain provider identity after archival"
-   (get first-document "providerId")
-   "fixture")
-  (std.lib.test/check
-   "acquisition receipts retain accepted checkpoints"
+[(test-check
+  "source bytes are written to the Git object database"
+  (vault/read-blob test-vault first-object)
+  "{\"answer\":42}")
+ (test-check
+  "source documents retain provider identity after archival"
+  (get first-document "providerId")
+  "fixture")
+ (test-check
+  "acquisition receipts retain accepted checkpoints"
+  (get
    (get
-    (get
-     (get first-acquisition "receipt")
-     "checkpoint")
-    "accepted")
-   {"generation" 1
-    "cursor" "document-1"})
-  (std.lib.test/check
-   "duplicate request IDs resolve to the existing acquisition"
-   (get duplicate-acquisition "commit")
-   (get first-acquisition "commit"))
-  (std.lib.test/check
-   "duplicate acquisitions are explicitly idempotent"
-   (get duplicate-acquisition "idempotent")
-   true)
-  (std.lib.test/check
-   "provider receipts form a provider-specific chain"
-   (get
-    (get second-acquisition "receipt")
-    "previousProviderCommit")
-   (get first-acquisition "commit"))
-  (std.lib.test/check
-   "the global acquisition head advances atomically"
-   (vault/ref-value test-vault archive/acquisition-head)
-   (get second-acquisition "commit"))
-  (std.lib.test/check
-   "stale provider checkpoints fail closed"
-   (fails?
-    (fn []
-      (let [stale-request
-            (provider/request
-             "archive-request-stale"
-             "fixture"
-             "pull"
-             {"generation" 0
-              "cursor" "start"}
-             {})
-            stale-result
-            (observation/result
-             stale-request
-             []
-             {"generation" 1
-              "cursor" "document-1"}
-             {"claimed" false}
-             [])]
-        (archive/acquire
-         test-vault
-         stale-request
-         stale-result))))
-   true)
-  (std.lib.test/check
-   "the resulting bare Git vault verifies cleanly"
-   (get (vault/verify test-vault) "ok")
-   true)
-  (std.lib.test/check
-   "archive fixtures clean up their working directory"
-   (do
-     (process/run ["rm" "-rf" test-root])
-     true)
-   true)])
+    (get first-acquisition "receipt")
+    "checkpoint")
+   "accepted")
+  {"generation" 1
+   "cursor" "document-1"})
+ (test-check
+  "duplicate request IDs resolve to the existing acquisition"
+  (get duplicate-acquisition "commit")
+  (get first-acquisition "commit"))
+ (test-check
+  "duplicate acquisitions are explicitly idempotent"
+  (get duplicate-acquisition "idempotent")
+  true)
+ (test-check
+  "provider receipts form a provider-specific chain"
+  (get
+   (get second-acquisition "receipt")
+   "previousProviderCommit")
+  (get first-acquisition "commit"))
+ (test-check
+  "the global acquisition head advances atomically"
+  (vault/ref-value test-vault archive/acquisition-head)
+  (get second-acquisition "commit"))
+ (test-check
+  "stale provider checkpoints fail closed"
+  (fails?
+   (fn []
+     (let [stale-request
+           (provider/request
+            "archive-request-stale"
+            "fixture"
+            "pull"
+            {"generation" 0
+             "cursor" "start"}
+            {})
+           stale-result
+           (observation/result
+            stale-request
+            []
+            {"generation" 1
+             "cursor" "document-1"}
+            {"claimed" false}
+            [])]
+       (archive/acquire
+        test-vault
+        stale-request
+        stale-result))))
+  true)
+ (test-check
+  "the resulting bare Git vault verifies cleanly"
+  (get (vault/verify test-vault) "ok")
+  true)
+ (test-check
+  "archive fixtures clean up their working directory"
+  (do
+    (process/run ["rm" "-rf" test-root])
+    true)
+  true)]
