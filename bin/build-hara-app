@@ -3,11 +3,13 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
-# hara-lang/hara#701: installed packages, project-aware REPL, and hara-app.
-HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-d364fa847e3d61bffe1a0095852730f8d8782938}
+# Immutable Hara substrate with hara-app, the bundled hara-lite bootstrap, and
+# work-backed CLI handlers using the canonical default-host value.
+HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-4f4565b5e2ecf476c09f77642bfe29a83fd21972}
 SOURCE_DIR=${HARA_SOURCE_DIR:-$ROOT/target/hara-runtime}
 BUILD_DIR=${HARA_BUILD_DIR:-$ROOT/target/hara-build}
 OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ROOT/target/bin}
+SHARE_DIR=${HARA_SHARE_DIR:-$ROOT/target/share/hara-lite}
 REVISION_FILE="$OUTPUT_DIR/hara-application-revision.txt"
 
 if [ -z "${HARA_SOURCE_DIR:-}" ]; then
@@ -34,11 +36,19 @@ CARGO_TARGET_DIR="$BUILD_DIR" cargo build \
   --locked \
   --manifest-path "$SOURCE_DIR/core/rust/Cargo.toml" \
   --bin hara \
+  --bin hara-lite \
   --bin hara-app
 
 mkdir -p "$OUTPUT_DIR"
 cp "$BUILD_DIR/release/hara" "$OUTPUT_DIR/hara"
+cp "$BUILD_DIR/release/hara-lite" "$OUTPUT_DIR/hara-lite"
 cp "$BUILD_DIR/release/hara-app" "$OUTPUT_DIR/hara-app"
-chmod +x "$OUTPUT_DIR/hara" "$OUTPUT_DIR/hara-app"
+chmod +x "$OUTPUT_DIR/hara" "$OUTPUT_DIR/hara-lite" "$OUTPUT_DIR/hara-app"
+
+rm -rf "$SHARE_DIR"
+mkdir -p "$SHARE_DIR"
+cp "$SOURCE_DIR/core/project.edn" "$SHARE_DIR/project.edn"
+cp -R "$SOURCE_DIR/core/lib" "$SHARE_DIR/lib"
+
 printf '%s\n' "$ACTUAL_REVISION" > "$REVISION_FILE"
 printf '%s\n' "$OUTPUT_DIR/hara-app"

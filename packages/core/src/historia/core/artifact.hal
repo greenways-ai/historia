@@ -13,6 +13,13 @@
    "text" (or text "")
    "attributes" (or attributes {})})
 
+(defn anchored-block
+  [id kind text attributes source-anchor]
+  (assoc
+   (block id kind text attributes)
+   "sourceAnchor"
+   source-anchor))
+
 (defn create
   [id kind source revision blocks]
   {"schema" artifact-schema

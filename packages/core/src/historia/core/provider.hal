@@ -1,0 +1,59 @@
+(ns historia.core.provider)
+
+(def provider-schema "historia.provider/0-alpha")
+(def registry-schema "historia.provider-registry/0-alpha")
+(def request-schema "historia.provider-request/0-alpha")
+(def result-schema "historia.provider-result/0-alpha")
+
+(defn descriptor
+  [id revision operations source-kinds artifact-kinds attributes]
+  {"schema" provider-schema
+   "id" id
+   "revision" revision
+   "operations" (or operations [])
+   "sourceKinds" (or source-kinds [])
+   "artifactKinds" (or artifact-kinds [])
+   "attributes" (or attributes {})})
+
+(defn create-registry
+  []
+  {"schema" registry-schema
+   "providers" {}})
+
+(defn register
+  [registry descriptor]
+  (assoc
+   registry
+   "providers"
+   (assoc
+    (get registry "providers")
+    (get descriptor "id")
+    descriptor)))
+
+(defn resolve
+  [registry provider-id]
+  (get (get registry "providers") provider-id))
+
+(defn counts
+  [registry]
+  {"providers" (count (get registry "providers"))})
+
+(defn request
+  [request-id provider-id operation checkpoint options]
+  {"schema" request-schema
+   "requestId" request-id
+   "providerId" provider-id
+   "operation" operation
+   "checkpoint" checkpoint
+   "options" (or options {})})
+
+(defn result
+  [request-id provider-id operation documents checkpoint completeness warnings]
+  {"schema" result-schema
+   "requestId" request-id
+   "providerId" provider-id
+   "operation" operation
+   "documents" (or documents [])
+   "checkpoint" checkpoint
+   "completeness" (or completeness {"claimed" false})
+   "warnings" (or warnings [])})

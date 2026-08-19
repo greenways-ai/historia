@@ -1,0 +1,39 @@
+(ns historia.provider-registry-test
+  (:require [historia.core.provider :as provider]
+            [historia.core.source :as source]
+            [historia.kernel :as kernel]
+            [historia.provider.github :as github]))
+
+(std.lib.test/print-results
+ [(std.lib.test/check
+   "the GitHub adapter conforms to the shared provider schema"
+   (get github/provider "schema")
+   provider/provider-schema)
+  (std.lib.test/check
+   "the kernel describes the shared provider registry"
+   (get (get kernel/descriptor "providerRegistry") "schema")
+   provider/registry-schema)
+  (std.lib.test/check
+   "the static provider registry stores descriptors by stable ID"
+   (get
+    (get
+     (get (get kernel/descriptor "providerRegistry") "providers")
+     "github")
+    "id")
+   "github")
+  (std.lib.test/check
+   "the kernel exposes source-document contracts"
+   (get (get kernel/descriptor "source") "documentSchema")
+   source/document-schema)
+  (std.lib.test/check
+   "the runtime kernel registers GitHub by stable ID"
+   (get
+    (provider/resolve
+     (get (kernel/create) "providers")
+     "github")
+    "id")
+   "github")
+  (std.lib.test/check
+   "the GitHub provider remains read-only"
+   (get github/provider "writesEnabled")
+   false)])

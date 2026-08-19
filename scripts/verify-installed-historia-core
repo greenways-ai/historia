@@ -7,6 +7,7 @@ WORK_ROOT=${HISTORIA_CORE_VERIFY_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/historia-cor
 DIST_ROOT="$WORK_ROOT/dist"
 CONSUMER="$WORK_ROOT/consumer"
 ARCHIVE="$WORK_ROOT/greenways-historia-core-0.1.0.harp"
+BUILD_LOG="$WORK_ROOT/package-build.txt"
 KEEP=${HISTORIA_CORE_VERIFY_KEEP:-0}
 
 cleanup() {
@@ -73,9 +74,15 @@ cat > "$CONSUMER/test/example/main_test.hal" <<'EOF'
     "indexSchema" "historia.index/0-alpha"})])
 EOF
 
-HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" package build \
-  "$ROOT/packages/core" \
-  --output "$ARCHIVE"
+HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" package build "$ROOT/packages/core" \
+  | tee "$BUILD_LOG"
+BUILT_ARCHIVE=$(sed -n 's/^package build: //p' "$BUILD_LOG" | tail -n 1)
+if [ -z "$BUILT_ARCHIVE" ] || [ ! -f "$BUILT_ARCHIVE" ]; then
+  echo "hara package build did not report a readable archive path" >&2
+  exit 1
+fi
+cp "$BUILT_ARCHIVE" "$ARCHIVE"
+
 HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" package install "$ARCHIVE"
 
 HARA_DIST_HOME="$DIST_ROOT" "$HARA_CLI" --project "$CONSUMER" check

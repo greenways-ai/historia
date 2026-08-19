@@ -2,7 +2,22 @@
   (:require [historia.core.artifact :as artifact]))
 
 (def provider
-  {"id" "github"
+  {"schema" "historia.provider/0-alpha"
+   "id" "github"
+   "revision" "0-alpha"
+   "operations" ["discover" "pull" "observe" "status"]
+   "sourceKinds" ["github.repository"
+                  "github.issue"
+                  "github.comment"
+                  "github.pull-request"
+                  "github.commit"]
+   "artifactKinds" ["repository"
+                    "issue"
+                    "comment"
+                    "pull-request"
+                    "commit"]
+   "attributes" {"readOnly" true
+                 "credentialPolicy" "executor-bound"}
    "mode" "observation"
    "artifacts" ["repository" "issue" "comment"]
    "writesEnabled" false})

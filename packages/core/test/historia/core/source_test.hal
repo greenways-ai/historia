@@ -1,0 +1,98 @@
+(ns historia.core.source-test
+  (:require [historia.core.artifact :as artifact]
+            [historia.core.source :as source]))
+
+[(test-check
+  "blob references retain their content address"
+  (get
+   (source/blob
+    "sha256"
+    "f00d"
+    128
+    "application/json"
+    {"kind" "git-object"
+     "oid" "blob-1"})
+   "digest")
+  "f00d")
+ (test-check
+  "source documents retain provider and remote identity"
+  (get
+   (source/document
+    "source:openai:conversation-1:revision-1"
+    "openai.conversation"
+    "openai-export"
+    "conversation-1"
+    "revision-1"
+    "2026-08-19T11:00:00Z"
+    (source/blob
+     "sha256"
+     "f00d"
+     128
+     "application/json"
+     {"kind" "git-object"
+      "oid" "blob-1"})
+    {"sourceKind" "official-export"})
+   "remoteId")
+  "conversation-1")
+ (test-check
+  "source documents do not invent credential fields"
+  (get
+   (source/document
+    "source:openai:conversation-1:revision-1"
+    "openai.conversation"
+    "openai-export"
+    "conversation-1"
+    "revision-1"
+    "2026-08-19T11:00:00Z"
+    (source/blob
+     "sha256"
+     "f00d"
+     128
+     "application/json"
+     {})
+    {})
+   "credentials")
+  nil)
+ (test-check
+  "anchors retain exact byte ranges"
+  (get
+   (source/anchor
+    "source:openai:conversation-1:revision-1"
+    12
+    48
+    2
+    4
+    {"path" "messages/answer"})
+   "byteRange")
+  [12 48])
+ (test-check
+  "anchors retain exact line ranges"
+  (get
+   (source/anchor
+    "source:openai:conversation-1:revision-1"
+    12
+    48
+    2
+    4
+    {"path" "messages/answer"})
+   "lineRange")
+  [2 4])
+ (test-check
+  "artifact blocks retain their canonical source anchor"
+  (get
+   (get
+    (artifact/anchored-block
+     "conversation:1/message:2/block:1"
+     "code"
+     "answer = 42"
+     {"language" "python"}
+     (source/anchor
+      "source:openai:conversation-1:revision-1"
+      12
+      48
+      2
+      4
+      {"path" "messages/answer"}))
+    "sourceAnchor")
+   "documentId")
+  "source:openai:conversation-1:revision-1")]

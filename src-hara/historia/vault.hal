@@ -23,6 +23,10 @@
   [vault arguments]
   (process/run! (git-argv vault arguments)))
 
+(defn git-run-input!
+  [vault arguments input]
+  (process/run-input! (git-argv vault arguments) input))
+
 (defn initialized?
   [vault]
   (= 0 (:exit (git-run vault ["rev-parse" "--git-dir"]))))
@@ -49,3 +53,60 @@
      "ok" (= 0 (:exit result))
      "stdout" (str/trim (:stdout result))
      "stderr" (str/trim (:stderr result))}))
+
+(defn hash-content
+  [vault content]
+  (str/trim
+   (:stdout
+    (git-run-input! vault ["hash-object" "--stdin"] content))))
+
+(defn write-blob
+  [vault content]
+  (str/trim
+   (:stdout
+    (git-run-input! vault ["hash-object" "-w" "--stdin"] content))))
+
+(defn read-blob-bytes
+  [vault object-id]
+  (:stdout-bytes
+   (git-run! vault ["cat-file" "blob" object-id])))
+
+(defn read-blob
+  [vault object-id]
+  (str/decode-utf8 (read-blob-bytes vault object-id)))
+
+(defn ref-value
+  [vault reference]
+  (let [result (git-run vault ["rev-parse" "--verify" reference])]
+    (if (= 0 (:exit result))
+      (str/trim (:stdout result))
+      nil)))
+
+(defn read-commit-path
+  [vault commit path]
+  (:stdout
+   (git-run! vault ["show" (str/join "" [commit ":" path])])))
+
+(defn write-tree
+  [vault entries]
+  (str/trim
+   (:stdout
+    (git-run-input! vault ["mktree"] entries))))
+
+(defn commit-tree
+  [vault tree parent message]
+  (let [arguments
+        (if parent
+          ["-c" "user.name=Historia"
+           "-c" "user.email=historia@local"
+           "commit-tree" tree "-p" parent]
+          ["-c" "user.name=Historia"
+           "-c" "user.email=historia@local"
+           "commit-tree" tree])]
+    (str/trim
+     (:stdout
+      (git-run-input! vault arguments message)))))
+
+(defn update-refs!
+  [vault transaction]
+  (git-run-input! vault ["update-ref" "--stdin"] transaction))
