@@ -3,8 +3,9 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 HARA_REPOSITORY=${HARA_REPOSITORY:-https://github.com/hara-lang/hara.git}
-# Immutable Hara substrate with hara-app plus the bundled hara-lite bootstrap.
-HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-2acd20cb5d1b0e1fb9d93496eb836c1bcbfd61da}
+# Immutable Hara substrate with hara-app, the bundled hara-lite bootstrap, and
+# work-backed CLI handlers using the canonical default-host value.
+HARA_APPLICATION_REV=${HARA_APPLICATION_REV:-4f4565b5e2ecf476c09f77642bfe29a83fd21972}
 SOURCE_DIR=${HARA_SOURCE_DIR:-$ROOT/target/hara-runtime}
 BUILD_DIR=${HARA_BUILD_DIR:-$ROOT/target/hara-build}
 OUTPUT_DIR=${HARA_OUTPUT_DIR:-$ROOT/target/bin}
