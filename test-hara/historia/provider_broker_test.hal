@@ -58,69 +58,68 @@
     (catch Throwable error
       true)))
 
-(std.lib.test/print-results
- [(std.lib.test/check
-   "provider executors bind by registered provider ID"
-   (broker/bound? bound-broker "fixture")
-   true)
-  (std.lib.test/check
-   "provider executors are represented as checkpointed work steps"
-   (get (broker/executor-spec bound-broker "fixture") :op)
-   :step)
-  (std.lib.test/check
-   "provider execution preserves request identity"
-   (get (broker/execute bound-broker pull-request) "requestId")
-   "broker-request-1")
-  (std.lib.test/check
-   "provider execution preserves accepted checkpoints"
+[(test-check
+  "provider executors bind by registered provider ID"
+  (broker/bound? bound-broker "fixture")
+  true)
+ (test-check
+  "provider executors are represented as checkpointed work steps"
+  (get (broker/executor-spec bound-broker "fixture") :op)
+  :step)
+ (test-check
+  "provider execution preserves request identity"
+  (get (broker/execute bound-broker pull-request) "requestId")
+  "broker-request-1")
+ (test-check
+  "provider execution preserves accepted checkpoints"
+  (get
    (get
-    (get
+    (broker/execute
+     bound-broker
+     (provider/request
+      "broker-request-2"
+      "fixture"
+      "pull"
+      nil
+      {}))
+    "checkpoint")
+   "generation")
+  1)
+ (test-check
+  "undeclared provider operations fail closed"
+  (fails?
+   (fn []
      (broker/execute
       bound-broker
       (provider/request
-       "broker-request-2"
+       "broker-request-delete"
+       "fixture"
+       "delete"
+       nil
+       {}))))
+  true)
+ (test-check
+  "registered providers require an executor binding"
+  (fails?
+   (fn []
+     (broker/execute
+      (broker/create fixture-registry)
+      pull-request)))
+  true)
+ (test-check
+  "credential fields are rejected from provider requests"
+  (fails?
+   (fn []
+     (broker/execute
+      bound-broker
+      (provider/request
+       "broker-request-secret"
        "fixture"
        "pull"
        nil
-       {}))
-     "checkpoint")
-    "generation")
-   1)
-  (std.lib.test/check
-   "undeclared provider operations fail closed"
-   (fails?
-    (fn []
-      (broker/execute
-       bound-broker
-       (provider/request
-        "broker-request-delete"
-        "fixture"
-        "delete"
-        nil
-        {}))))
-   true)
-  (std.lib.test/check
-   "registered providers require an executor binding"
-   (fails?
-    (fn []
-      (broker/execute
-       (broker/create fixture-registry)
-       pull-request)))
-   true)
-  (std.lib.test/check
-   "credential fields are rejected from provider requests"
-   (fails?
-    (fn []
-      (broker/execute
-       bound-broker
-       (provider/request
-        "broker-request-secret"
-        "fixture"
-        "pull"
-        nil
-        {"access_token" "secret"}))))
-   true)
-  (std.lib.test/check
-   "broker status separates registered and bound providers"
-   (get (broker/status bound-broker) "boundProviders")
-   ["fixture"])])
+       {"access_token" "secret"}))))
+  true)
+ (test-check
+  "broker status separates registered and bound providers"
+  (get (broker/status bound-broker) "boundProviders")
+  ["fixture"])]
