@@ -1,0 +1,209 @@
+(ns historia.provider.broker
+  (:require [historia.core.provider :as provider]
+            [historia.provider.observation :as observation]
+            [historia.source.archive :as archive]
+            [work.base :as work]))
+
+(def schema "historia.provider-broker/0-alpha")
+
+(def descriptor
+  {"schema" schema
+   "execution" "hara.work/step"
+   "archive" archive/schema
+   "operations" ["discover" "pull" "observe" "status"]
+   "credentialPolicy" "executor-bound"})
+
+(defn create
+  ([registry]
+   (create registry {}))
+  ([registry options]
+   {:schema schema
+    :registry registry
+    :host (or (:host options) work/default-host)
+    :executors {}}))
+
+(defn- contains-value?
+  [values value]
+  (reduce
+   (fn [found candidate]
+     (or found (= candidate value)))
+   false
+   (or values [])))
+
+(defn- provider-descriptor!
+  [broker provider-id]
+  (let [descriptor
+        (provider/resolve (:registry broker) provider-id)]
+    (if (nil? descriptor)
+      (throw
+       (ex-info
+        "Provider is not registered"
+        {:error/code :historia.provider/not-registered
+         :provider/id provider-id})))
+    descriptor))
+
+(defn- assert-operation!
+  [descriptor operation]
+  (if (not
+       (contains-value?
+        (get descriptor "operations")
+        operation))
+    (throw
+     (ex-info
+      "Provider does not declare the requested operation"
+      {:error/code :historia.provider/unsupported-operation
+       :provider/id (get descriptor "id")
+       :operation operation})))
+  descriptor)
+
+(defn- executor-work
+  [descriptor executor]
+  (work/step
+   {:id (symbol
+         (str/join
+          ""
+          ["historia.provider/" (get descriptor "id")]))
+    :version 1
+    :retry {:maximum 1}}
+   (fn [request context]
+     (executor request context))))
+
+(defn bind
+  [broker provider-id executor]
+  (if (not (fn? executor))
+    (throw
+     (ex-info
+      "Provider executor binding must be a function"
+      {:error/code :historia.provider/invalid-executor
+       :provider/id provider-id})))
+  (let [descriptor (provider-descriptor! broker provider-id)
+        binding
+        {:provider descriptor
+         :work (executor-work descriptor executor)}]
+    (assoc broker
+           :executors
+           (assoc (:executors broker)
+                  provider-id
+                  binding))))
+
+(defn bound?
+  [broker provider-id]
+  (not (nil? (get (:executors broker) provider-id))))
+
+(defn executor-spec
+  [broker provider-id]
+  (let [binding (get (:executors broker) provider-id)]
+    (if binding
+      (work/work-spec (:work binding))
+      nil)))
+
+(defn- binding!
+  [broker provider-id]
+  (let [binding (get (:executors broker) provider-id)]
+    (if (nil? binding)
+      (throw
+       (ex-info
+        "Provider has no executor binding"
+        {:error/code :historia.provider/not-bound
+         :provider/id provider-id})))
+    binding))
+
+(defn- validate-request!
+  [broker request]
+  (let [provider-id (get request "providerId")
+        operation (get request "operation")
+        request-id (get request "requestId")
+        descriptor (provider-descriptor! broker provider-id)]
+    (if (nil? request-id)
+      (throw
+       (ex-info
+        "Provider request requires a stable request ID"
+        {:error/code :historia.provider/missing-request-id})))
+    (assert-operation! descriptor operation)
+    (observation/assert-safe! (or (get request "options") {}))
+    request))
+
+(defn- validate-observation!
+  [record]
+  (if (not= observation/observation-schema
+            (get record "schema"))
+    (throw
+     (ex-info
+      "Provider result contains an unsupported observation schema"
+      {:error/code :historia.provider/invalid-observation
+       :schema (get record "schema")})))
+  (if (nil? (get record "id"))
+    (throw
+     (ex-info
+      "Provider observation requires a stable source-document ID"
+      {:error/code :historia.provider/missing-document-id})))
+  (observation/assert-safe! (or (get record "attributes") {}))
+  record)
+
+(defn- validate-result!
+  [request value]
+  (if (not= observation/result-schema
+            (get value "schema"))
+    (throw
+     (ex-info
+      "Provider executor returned an unsupported result schema"
+      {:error/code :historia.provider/invalid-result
+       :schema (get value "schema")})))
+  (if (not= (get request "requestId")
+            (get value "requestId"))
+    (throw
+     (ex-info
+      "Provider result request identity does not match"
+      {:error/code :historia.provider/result-request-mismatch})))
+  (if (not= (get request "providerId")
+            (get value "providerId"))
+    (throw
+     (ex-info
+      "Provider result provider identity does not match"
+      {:error/code :historia.provider/result-provider-mismatch})))
+  (if (not= (get request "operation")
+            (get value "operation"))
+    (throw
+     (ex-info
+      "Provider result operation does not match"
+      {:error/code :historia.provider/result-operation-mismatch})))
+  (reduce
+   (fn [_ record]
+     (validate-observation! record)
+     true)
+   true
+   (or (get value "observations") []))
+  (observation/assert-safe!
+   {"completeness" (get value "completeness")
+    "warnings" (get value "warnings")})
+  value)
+
+(defn execute
+  [broker request]
+  (let [request (validate-request! broker request)
+        provider-id (get request "providerId")
+        binding (binding! broker provider-id)
+        value
+        (work/run
+         (:host broker)
+         (:work binding)
+         request
+         {:id (get request "requestId")})]
+    (validate-result! request value)))
+
+(defn acquire
+  [broker vault request]
+  (let [request (validate-request! broker request)
+        existing (archive/lookup-request vault request)]
+    (if existing
+      existing
+      (archive/acquire
+       vault
+       request
+       (execute broker request)))))
+
+(defn status
+  [broker]
+  {"schema" schema
+   "registered" (provider/counts (:registry broker))
+   "boundProviders" (vec (sort (keys (:executors broker))))})

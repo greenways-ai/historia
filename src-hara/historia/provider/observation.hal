@@ -1,0 +1,99 @@
+(ns historia.provider.observation)
+
+(def observation-schema "historia.provider-observation/0-alpha")
+(def result-schema "historia.provider-observation-result/0-alpha")
+
+(def forbidden-fields
+  #{"authorization"
+    "cookie"
+    "cookies"
+    "accesstoken"
+    "refreshtoken"
+    "sessiontoken"
+    "clientsecret"
+    "password"})
+
+(defn- normalise-field
+  [value]
+  (str/lower-case
+   (str/replace
+    (str/replace
+     (str/replace (str value) ":" "")
+     "_"
+     "")
+    "-"
+    "")))
+
+(declare assert-safe!)
+
+(defn- assert-map-safe!
+  [value]
+  (reduce
+   (fn [_ key]
+     (if (get forbidden-fields (normalise-field key))
+       (throw
+        (ex-info
+         "Provider metadata contains a forbidden credential field"
+         {:error/code :historia.provider/credential-field
+          :field key})))
+     (assert-safe! (get value key))
+     true)
+   true
+   (keys value))
+  value)
+
+(defn- assert-values-safe!
+  [values]
+  (reduce
+   (fn [_ value]
+     (assert-safe! value)
+     true)
+   true
+   values)
+  values)
+
+(defn assert-safe!
+  [value]
+  (cond
+    (map? value) (assert-map-safe! value)
+    (vector? value) (assert-values-safe! value)
+    (list? value) (assert-values-safe! value)
+    (set? value) (assert-values-safe! value)
+    :else value))
+
+(defn observation
+  [id kind remote-id revision observed-at media-type content attributes]
+  (let [attributes (or attributes {})]
+    (assert-safe! attributes)
+    {"schema" observation-schema
+     "id" id
+     "kind" kind
+     "remoteId" remote-id
+     "revision" revision
+     "observedAt" observed-at
+     "mediaType" media-type
+     "content" content
+     "attributes" attributes}))
+
+(defn content-bytes
+  [record]
+  (let [content (get record "content")]
+    (if (string? content)
+      (str/encode-utf8 content)
+      content)))
+
+(defn result
+  [request observations checkpoint completeness warnings]
+  (let [completeness (or completeness {"claimed" false})
+        warnings (or warnings [])]
+    (assert-safe! (or (get request "options") {}))
+    (assert-safe! completeness)
+    (assert-safe! warnings)
+    {"schema" result-schema
+     "requestId" (get request "requestId")
+     "providerId" (get request "providerId")
+     "operation" (get request "operation")
+     "observations" (or observations [])
+     "checkpoint" checkpoint
+     "completeness" completeness
+     "warnings" warnings}))

@@ -1,0 +1,251 @@
+(ns historia.source.archive
+  (:require [historia.core.provider :as provider]
+            [historia.core.source :as source]
+            [historia.provider.observation :as observation]
+            [historia.provider.receipt :as receipt]
+            [historia.vault :as vault]))
+
+(def schema "historia.acquisition/0-alpha")
+(def acquisition-head "refs/historia/acquisitions/head")
+
+(defn- reference-key
+  [vault-path prefix value]
+  (str/join
+   ""
+   [prefix (vault/hash-content vault-path (str value))]))
+
+(defn request-reference
+  [vault-path request-id]
+  (reference-key
+   vault-path
+   "refs/historia/acquisitions/requests/"
+   request-id))
+
+(defn provider-reference
+  [vault-path provider-id]
+  (reference-key
+   vault-path
+   "refs/historia/acquisitions/providers/"
+   provider-id))
+
+(defn read-receipt
+  [vault-path commit]
+  (edn/read
+   (vault/read-commit-path vault-path commit "receipt.edn")))
+
+(defn- archive-envelope
+  [commit acquisition-receipt idempotent]
+  {"schema" schema
+   "commit" commit
+   "receipt" acquisition-receipt
+   "result" (get acquisition-receipt "result")
+   "idempotent" idempotent})
+
+(defn lookup-request
+  [provided request]
+  (let [initialized (vault/init provided)
+        vault-path (get initialized "vault")
+        reference (request-reference
+                   vault-path
+                   (get request "requestId"))
+        commit (vault/ref-value vault-path reference)]
+    (if commit
+      (let [stored (read-receipt vault-path commit)]
+        (if (not (receipt/request-matches? stored request))
+          (throw
+           (ex-info
+            "Acquisition request ID is already bound to different request metadata"
+            {:error/code :historia.provider/request-collision
+             :request/id (get request "requestId")})))
+        (archive-envelope commit stored true))
+      nil)))
+
+(defn- checkpoint-generation
+  [checkpoint]
+  (if (map? checkpoint)
+    (get checkpoint "generation")
+    nil))
+
+(defn- assert-checkpoint-order!
+  [request result previous-receipt]
+  (let [requested (get request "checkpoint")
+        expected (if previous-receipt
+                   (receipt/accepted-checkpoint previous-receipt)
+                   nil)
+        accepted (get result "checkpoint")
+        requested-generation (checkpoint-generation requested)
+        accepted-generation (checkpoint-generation accepted)]
+    (if (and previous-receipt (not= expected requested))
+      (throw
+       (ex-info
+        "Provider request does not continue from the last accepted checkpoint"
+        {:error/code :historia.provider/stale-checkpoint
+         :provider/id (get request "providerId")
+         :expected expected
+         :received requested})))
+    (if (and requested-generation
+             accepted-generation
+             (< accepted-generation requested-generation))
+      (throw
+       (ex-info
+        "Provider checkpoint generation moved backwards"
+        {:error/code :historia.provider/checkpoint-regression
+         :provider/id (get request "providerId")
+         :previous requested-generation
+         :accepted accepted-generation})))
+    result))
+
+(defn- tree-entry
+  [object-id name]
+  (str/join
+   ""
+   ["100644 blob " object-id "\t" name "\n"]))
+
+(defn- archive-observations
+  [vault-path object-format provider-id observations]
+  (loop [index 0
+         documents []
+         entries []]
+    (if (= index (count observations))
+      {"documents" documents
+       "entries" entries}
+      (let [record (nth observations index)
+            _ (observation/assert-safe! (get record "attributes"))
+            bytes (observation/content-bytes record)
+            object-id (vault/write-blob vault-path bytes)
+            blob-reference
+            (source/blob
+             (str/join "" ["git-" object-format])
+             object-id
+             (bytes/count bytes)
+             (or (get record "mediaType")
+                 "application/octet-stream")
+             {"kind" "git-object"
+              "oid" object-id})
+            document
+            (source/document
+             (get record "id")
+             (get record "kind")
+             provider-id
+             (get record "remoteId")
+             (get record "revision")
+             (get record "observedAt")
+             blob-reference
+             (or (get record "attributes") {}))]
+        (recur
+         (+ index 1)
+         (conj documents document)
+         (conj entries
+               {"name" (str/join "" ["source-" (str index) ".bin"])
+                "oid" object-id}))))))
+
+(defn- tree-source
+  [entries receipt-object]
+  (let [source-lines
+        (reduce
+         (fn [output entry]
+           (str/join
+            ""
+            [output
+             (tree-entry
+              (get entry "oid")
+              (get entry "name"))]))
+         ""
+         entries)]
+    (str/join
+     ""
+     [source-lines
+      (tree-entry receipt-object "receipt.edn")])))
+
+(defn- ref-command
+  [reference commit previous]
+  (if previous
+    (str/join
+     ""
+     ["update " reference " " commit " " previous "\n"])
+    (str/join
+     ""
+     ["create " reference " " commit "\n"])))
+
+(defn- update-acquisition-refs!
+  [vault-path commit request-ref provider-ref global-head provider-head]
+  (let [transaction
+        (str/join
+         ""
+         ["start\n"
+          (ref-command acquisition-head commit global-head)
+          (ref-command provider-ref commit provider-head)
+          (str/join "" ["create " request-ref " " commit "\n"])
+          "prepare\n"
+          "commit\n"])]
+    (vault/update-refs! vault-path transaction)))
+
+(defn acquire
+  [provided request observation-result]
+  (let [existing (lookup-request provided request)]
+    (if existing
+      existing
+      (let [initialized (vault/init provided)
+            vault-path (get initialized "vault")
+            object-format (get initialized "objectFormat")
+            provider-id (get request "providerId")
+            request-ref (request-reference
+                         vault-path
+                         (get request "requestId"))
+            provider-ref (provider-reference vault-path provider-id)
+            global-head (vault/ref-value vault-path acquisition-head)
+            provider-head (vault/ref-value vault-path provider-ref)
+            previous-receipt (if provider-head
+                               (read-receipt vault-path provider-head)
+                               nil)
+            result (if (get observation-result "checkpoint")
+                     observation-result
+                     (assoc observation-result
+                            "checkpoint"
+                            (get request "checkpoint")))
+            _ (assert-checkpoint-order! request result previous-receipt)
+            archived
+            (archive-observations
+             vault-path
+             object-format
+             provider-id
+             (or (get result "observations") []))
+            provider-result
+            (provider/result
+             (get request "requestId")
+             provider-id
+             (get request "operation")
+             (get archived "documents")
+             (get result "checkpoint")
+             (get result "completeness")
+             (get result "warnings"))
+            acquisition-receipt
+            (receipt/create
+             request
+             provider-result
+             (get archived "documents")
+             provider-head)
+            receipt-object
+            (vault/write-blob
+             vault-path
+             (str/join "" [(pr-str acquisition-receipt) "\n"]))
+            tree
+            (vault/write-tree
+             vault-path
+             (tree-source
+              (get archived "entries")
+              receipt-object))
+            commit
+            (vault/commit-tree
+             vault-path
+             tree
+             global-head
+             "Historia acquisition\n")]
+        (update-acquisition-refs!
+         vault-path
+         commit
+         request-ref
+         provider-ref
+         global-head
+         provider-head)
+        (archive-envelope commit acquisition-receipt false)))))
