@@ -13,10 +13,14 @@
 (def test-vault
   (str/join "" [test-root "/vault.git"]))
 
+(def test-vault-two
+  (str/join "" [test-root "/vault-two.git"]))
+
 (defn reset-vault!
   []
   (process/run ["rm" "-rf" test-root])
-  (vault/init test-vault))
+  (vault/init test-vault)
+  (vault/init test-vault-two))
 
 (def fixture-descriptor
   (provider/descriptor
@@ -115,6 +119,8 @@
   (broker/acquire archive-broker test-vault request-one))
 (def second-acquisition
   (broker/acquire archive-broker test-vault request-two))
+(def second-vault-acquisition
+  (broker/acquire archive-broker test-vault-two request-one))
 
 (def first-document
   (nth
@@ -130,11 +136,16 @@
    (get
     (broker/acquisition-spec archive-broker "fixture")
     :op)]
-  [2 :chain])
+  [3 :chain])
  (test-check
   "source bytes are written to the Git object database"
   (vault/read-blob test-vault first-object)
   "{\"answer\":42}")
+ (test-check
+  "managed acquisition replay is scoped to the target Git vault"
+  [(get second-vault-acquisition "idempotent")
+   (vault/read-blob test-vault-two first-object)]
+  [false "{\"answer\":42}"])
  (test-check
   "source documents retain provider identity after archival"
   (get first-document "providerId")
