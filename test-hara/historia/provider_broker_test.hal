@@ -61,59 +61,66 @@
       (get (work/work-spec child) :op))
     (:children acquisition-spec))))
 
-(def replay-executions (atom 0))
+(def default-executions (atom 0))
 
-(defn replay-executor
+(defn default-executor
   [request context]
-  (swap! replay-executions inc)
+  (swap! default-executions inc)
   (fixture-executor request context))
 
-(def replay-broker
+(def default-broker
   (broker/bind
    (broker/create fixture-registry)
    "fixture"
-   replay-executor))
+   default-executor))
 
-(def replay-request
+(def default-request
   (provider/request
-   "broker-request-replay"
+   "broker-request-default-bare"
    "fixture"
    "pull"
    nil
    {}))
 
-(def replay-result-one
-  (broker/execute replay-broker replay-request))
+(def default-result-one
+  (broker/execute default-broker default-request))
 
-(def replay-result-two
-  (broker/execute replay-broker replay-request))
+(def default-result-two
+  (broker/execute default-broker default-request))
 
-(def bare-executions (atom 0))
+(def nil-store-runtime
+  (work/local-runtime
+   {:work/store nil
+    :work/registry nil}))
 
-(defn bare-executor
+(def configured-bare-executions (atom 0))
+
+(defn configured-bare-executor
   [request context]
-  (swap! bare-executions inc)
+  (swap! configured-bare-executions inc)
   (fixture-executor request context))
 
-(def bare-broker
+(def configured-bare-broker
   (broker/bind
-   (broker/create fixture-registry {:work/runtime nil})
+   (broker/create
+    fixture-registry
+    {:work/runtime nil-store-runtime})
    "fixture"
-   bare-executor))
+   configured-bare-executor))
 
-(def bare-request
+(def configured-bare-request
   (provider/request
-   "broker-request-bare"
+   "broker-request-configured-bare"
    "fixture"
    "pull"
    nil
    {}))
 
-(def bare-result-one
-  (broker/execute bare-broker bare-request))
+(def configured-bare-result-one
+  (broker/execute configured-bare-broker configured-bare-request))
 
-(def bare-result-two
-  (broker/execute bare-broker bare-request))
+(def configured-bare-result-two
+  (broker/execute configured-bare-broker configured-bare-request))
 
 (defn fails?
   [function]
@@ -137,21 +144,24 @@
    acquisition-operations]
   [:chain [:step :pure :step]])
  (test-check
-  "provider brokers default to the canonical durable Runtime map"
-  [(work/canonical-runtime? (broker/work-runtime bound-broker))
-   (get (broker/status bound-broker) "workMode")]
-  [true :durable])
+  "provider brokers default to the store-free Work evaluator"
+  [(broker/work-runtime default-broker)
+   (broker/managed? default-broker)
+   (get (broker/status default-broker) "workMode")]
+  [nil false :bare])
  (test-check
-  "managed provider execution replays one completed request"
-  [(deref replay-executions)
-   (= replay-result-one replay-result-two)]
-  [1 true])
+  "default bare execution retains no managed replay state"
+  [(deref default-executions)
+   (= default-result-one default-result-two)]
+  [2 true])
  (test-check
-  "explicit bare execution retains no managed replay state"
-  [(broker/managed? bare-broker)
-   (deref bare-executions)
-   (= bare-result-one bare-result-two)]
-  [false 2 true])
+  "a canonical nil-store Runtime remains genuinely bare"
+  [(work/canonical-runtime? nil-store-runtime)
+   (broker/managed? configured-bare-broker)
+   (get (broker/status configured-bare-broker) "workMode")
+   (deref configured-bare-executions)
+   (= configured-bare-result-one configured-bare-result-two)]
+  [true false :bare 2 true])
  (test-check
   "provider execution preserves request identity"
   (get (broker/execute bound-broker pull-request) "requestId")

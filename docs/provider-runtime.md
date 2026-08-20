@@ -37,14 +37,16 @@ provider :step
 
 The provider step receives the request plus the ordinary Hara Work context and returns a bounded `historia.provider-observation-result/0-alpha` value. Work normalizes direct and asynchronous results before the pure validation stage. Request options, observations, completeness evidence and warnings are recursively checked for credential-shaped fields before persistence.
 
-The broker defaults to a canonical five-key `work/durable-runtime` backed by the baseline in-memory `IWorkStore`. This gives one broker instance managed run identity, checkpoint replay and committed Work history without requiring SQLite, PostgreSQL, an outbox or a receipt publisher. A caller may inject another canonical Runtime with `:work/runtime`, or explicitly set `:work/runtime nil` to use the store-free `work.eval/run` interpretation.
+The broker defaults to the store-free `work.eval/run` interpretation. This keeps the first provider runtime dependent only on the Work algebra and an executor; it does not construct a run journal, checkpoint store, outbox, receipt publisher, lease manager or SQL provider. Repeating an ordinary provider execution therefore invokes the provider again.
+
+A caller may inject a canonical five-key Runtime with `:work/runtime`. A Runtime whose `:work/store` is nil remains bare while retaining its executor, registry, policy and hooks. A Runtime with an `IWorkStore` selects the managed path explicitly; managed provider execution is not the default until its native Historia conformance is independently green.
 
 Work durability and Historia durability are deliberately separate:
 
-- `IWorkStore` records execution runs, step checkpoints and committed Work events.
+- `IWorkStore` records execution runs, step checkpoints and committed Work events when a managed Runtime is selected.
 - The Git acquisition ledger records original source bytes, provider checkpoints and immutable acquisition receipts.
 
-The Git ledger remains authoritative across process restarts. The default memory Work store accelerates and explains in-process replay; a persistent Work store can be injected later without changing provider or archive records.
+The Git ledger is the cross-process authority. A process restart or a different broker instance can determine whether an acquisition was committed by reading the immutable request receipt from Git. Work execution storage may later add managed replay without changing provider envelopes, source-document records or archive identity.
 
 ## Acquisition ledger
 
@@ -54,8 +56,8 @@ Original observation bytes are written to the bare Git vault before a receipt co
 - the provider-specific acquisition head;
 - the immutable request-ID receipt reference.
 
-A repeated request ID resolves to the existing receipt before Work is submitted, so it does not invoke the executor again and remains explicitly marked idempotent. The archive step repeats that lookup internally, which makes a retry safe if Git committed the acquisition before the Work checkpoint was recorded.
+A repeated request ID resolves to the existing receipt before Work is submitted, so it does not invoke the executor again and remains explicitly marked idempotent. The archive step repeats that lookup internally, which makes a retry safe if Git committed the acquisition before the Work interpretation returned.
 
-Reusing a request ID with different request metadata fails closed. Provider requests must continue from the last accepted checkpoint, and numeric checkpoint generations cannot move backwards.
+Reusing a request ID with different request metadata fails closed. Provider requests must continue from the last accepted checkpoint, and numeric checkpoint generations cannot move backwards. Acquisition Work identity also includes the target vault so a future managed store cannot replay a receipt from one vault into another.
 
-This broker remains read-only and local-first. Durable failure receipts, concurrent request fencing, document-ID collision references, portable qualified executor targets, and production GitHub/OpenAI/ChatGPT bindings remain follow-on work under the provider epic.
+This broker remains read-only and local-first. Managed-runtime conformance, durable failure receipts, concurrent request fencing, document-ID collision references, portable qualified executor targets, and production GitHub/OpenAI/ChatGPT bindings remain follow-on work under the provider epic.

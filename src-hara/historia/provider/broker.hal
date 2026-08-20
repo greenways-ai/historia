@@ -9,9 +9,9 @@
 
 (def descriptor
   {"schema" schema
-   "execution" "hara.work/managed"
+   "execution" "hara.work/bare"
    "workAlgebra" ["step" "pure" "chain"]
-   "defaultWorkStore" "memory"
+   "managedRuntime" "injectable"
    "archive" archive/schema
    "operations" ["discover" "pull" "observe" "status"]
    "credentialPolicy" "executor-bound"})
@@ -20,14 +20,13 @@
   ([registry]
    (create registry {}))
   ([registry options]
-   (let [runtime
-         (if (has? options :work/runtime)
-           (:work/runtime options)
-           (work/durable-runtime))]
-     {:schema schema
-      :registry registry
-      :work/runtime runtime
-      :executors {}})))
+   {:schema schema
+    :registry registry
+    :work/runtime
+    (if (has? options :work/runtime)
+      (:work/runtime options)
+      nil)
+    :executors {}}))
 
 (defn work-runtime
   [broker]
@@ -41,11 +40,10 @@
 
 (defn- runtime-mode
   [broker]
-  (let [runtime (work-runtime broker)]
-    (if runtime
-      (or (:work/mode (:work/policy runtime))
-          (if (managed? broker) :managed :bare))
-      :bare)))
+  (if (managed? broker)
+    (or (:work/mode (:work/policy (work-runtime broker)))
+        :managed)
+    :bare))
 
 (defn- contains-value?
   [values value]
