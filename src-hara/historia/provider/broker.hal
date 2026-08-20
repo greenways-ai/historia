@@ -35,13 +35,16 @@
 
 (defn managed?
   [broker]
-  (not (nil? (work-runtime broker))))
+  (let [runtime (work-runtime broker)]
+    (and runtime
+         (not (nil? (:work/store runtime))))))
 
 (defn- runtime-mode
   [broker]
   (let [runtime (work-runtime broker)]
     (if runtime
-      (or (:work/mode (:work/policy runtime)) :managed)
+      (or (:work/mode (:work/policy runtime))
+          (if (managed? broker) :managed :bare))
       :bare)))
 
 (defn- contains-value?
@@ -255,19 +258,38 @@
    ["historia.provider/"
     kind
     "/"
+    (get request "providerId")
+    "/"
     (get request "requestId")]))
 
+(defn- acquisition-run-id
+  [vault request]
+  (str/join
+   ""
+   ["historia.provider/acquire/"
+    (get request "providerId")
+    "/"
+    vault
+    "/"
+    (get request "requestId")]))
+
+(defn- bare-options
+  [runtime id]
+  {:run/id id
+   :work/registry (if runtime (:work/registry runtime) nil)
+   :work/policy (if runtime (:work/policy runtime) {})
+   :work/hooks (if runtime (:work/hooks runtime) {})})
+
 (defn- run-work
-  [broker kind work-value input request]
-  (let [runtime (work-runtime broker)
-        id (run-id kind request)]
-    (if runtime
+  [broker id work-value input]
+  (let [runtime (work-runtime broker)]
+    (if (managed? broker)
       (work/run runtime work-value input {:id id})
       (work-eval/run
-       nil
+       (if runtime (:work/executor runtime) nil)
        work-value
        input
-       {:run/id id}))))
+       (bare-options runtime id)))))
 
 (defn execute
   [broker request]
@@ -276,9 +298,8 @@
         binding (binding! broker provider-id)]
     (run-work
      broker
-     "execute"
+     (run-id "execute" request)
      (execution-work binding request)
-     request
      request)))
 
 (defn acquire
@@ -291,9 +312,8 @@
             binding (binding! broker provider-id)]
         (run-work
          broker
-         "acquire"
+         (acquisition-run-id vault request)
          (acquisition-work binding vault request)
-         request
          request)))))
 
 (defn status
