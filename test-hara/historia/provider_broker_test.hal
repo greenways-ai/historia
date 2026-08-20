@@ -1,7 +1,8 @@
 (ns historia.provider-broker-test
   (:require [historia.core.provider :as provider]
             [historia.provider.broker :as broker]
-            [historia.provider.observation :as observation]))
+            [historia.provider.observation :as observation]
+            [work.base :as work]))
 
 (def fixture-descriptor
   (provider/descriptor
@@ -50,6 +51,70 @@
    nil
    {"source" "fixture"}))
 
+(def acquisition-spec
+  (broker/acquisition-spec bound-broker "fixture"))
+
+(def acquisition-operations
+  (vec
+   (map
+    (fn [child]
+      (get (work/work-spec child) :op))
+    (:children acquisition-spec))))
+
+(def replay-executions (atom 0))
+
+(defn replay-executor
+  [request context]
+  (swap! replay-executions inc)
+  (fixture-executor request context))
+
+(def replay-broker
+  (broker/bind
+   (broker/create fixture-registry)
+   "fixture"
+   replay-executor))
+
+(def replay-request
+  (provider/request
+   "broker-request-replay"
+   "fixture"
+   "pull"
+   nil
+   {}))
+
+(def replay-result-one
+  (broker/execute replay-broker replay-request))
+
+(def replay-result-two
+  (broker/execute replay-broker replay-request))
+
+(def bare-executions (atom 0))
+
+(defn bare-executor
+  [request context]
+  (swap! bare-executions inc)
+  (fixture-executor request context))
+
+(def bare-broker
+  (broker/bind
+   (broker/create fixture-registry {:work/runtime nil})
+   "fixture"
+   bare-executor))
+
+(def bare-request
+  (provider/request
+   "broker-request-bare"
+   "fixture"
+   "pull"
+   nil
+   {}))
+
+(def bare-result-one
+  (broker/execute bare-broker bare-request))
+
+(def bare-result-two
+  (broker/execute bare-broker bare-request))
+
 (defn fails?
   [function]
   (try
@@ -63,9 +128,30 @@
   (broker/bound? bound-broker "fixture")
   true)
  (test-check
-  "provider executors are represented as checkpointed work steps"
+  "provider executors remain canonical Work steps"
   (get (broker/executor-spec bound-broker "fixture") :op)
   :step)
+ (test-check
+  "provider acquisition is a step-pure-step Work chain"
+  [(get acquisition-spec :op)
+   acquisition-operations]
+  [:chain [:step :pure :step]])
+ (test-check
+  "provider brokers default to the canonical durable Runtime map"
+  [(work/canonical-runtime? (broker/work-runtime bound-broker))
+   (get (broker/status bound-broker) "workMode")]
+  [true :durable])
+ (test-check
+  "managed provider execution replays one completed request"
+  [(deref replay-executions)
+   (= replay-result-one replay-result-two)]
+  [1 true])
+ (test-check
+  "explicit bare execution retains no managed replay state"
+  [(broker/managed? bare-broker)
+   (deref bare-executions)
+   (= bare-result-one bare-result-two)]
+  [false 2 true])
  (test-check
   "provider execution preserves request identity"
   (get (broker/execute bound-broker pull-request) "requestId")

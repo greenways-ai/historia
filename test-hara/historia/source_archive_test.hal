@@ -2,6 +2,7 @@
   (:require [historia.core.provider :as provider]
             [historia.path :as path]
             [historia.process :as process]
+            [historia.provider.broker :as broker]
             [historia.provider.observation :as observation]
             [historia.source.archive :as archive]
             [historia.vault :as vault]))
@@ -12,10 +13,28 @@
 (def test-vault
   (str/join "" [test-root "/vault.git"]))
 
+(def test-vault-two
+  (str/join "" [test-root "/vault-two.git"]))
+
 (defn reset-vault!
   []
   (process/run ["rm" "-rf" test-root])
-  (vault/init test-vault))
+  (vault/init test-vault)
+  (vault/init test-vault-two))
+
+(def fixture-descriptor
+  (provider/descriptor
+   "fixture"
+   "0-alpha"
+   ["discover" "pull" "observe" "status"]
+   ["fixture.document"]
+   ["document"]
+   {"readOnly" true}))
+
+(def fixture-registry
+  (provider/register
+   (provider/create-registry)
+   fixture-descriptor))
 
 (def request-one
   (provider/request
@@ -70,6 +89,21 @@
     "evidence" "fixture-page"}
    []))
 
+(def archive-executions (atom 0))
+
+(defn archive-executor
+  [request context]
+  (swap! archive-executions inc)
+  (if (= "archive-request-1" (get request "requestId"))
+    result-one
+    result-two))
+
+(def archive-broker
+  (broker/bind
+   (broker/create fixture-registry)
+   "fixture"
+   archive-executor))
+
 (defn fails?
   [function]
   (try
@@ -80,11 +114,13 @@
 
 (def initialized (reset-vault!))
 (def first-acquisition
-  (archive/acquire test-vault request-one result-one))
+  (broker/acquire archive-broker test-vault request-one))
 (def duplicate-acquisition
-  (archive/acquire test-vault request-one result-one))
+  (broker/acquire archive-broker test-vault request-one))
 (def second-acquisition
-  (archive/acquire test-vault request-two result-two))
+  (broker/acquire archive-broker test-vault request-two))
+(def second-vault-acquisition
+  (broker/acquire archive-broker test-vault-two request-one))
 
 (def first-document
   (nth
@@ -95,9 +131,21 @@
   (get (get first-document "blob") "digest"))
 
 [(test-check
+  "provider acquisition runs through the canonical Work plan"
+  [(deref archive-executions)
+   (get
+    (broker/acquisition-spec archive-broker "fixture")
+    :op)]
+  [3 :chain])
+ (test-check
   "source bytes are written to the Git object database"
   (vault/read-blob test-vault first-object)
   "{\"answer\":42}")
+ (test-check
+  "managed acquisition replay is scoped to the target Git vault"
+  [(get second-vault-acquisition "idempotent")
+   (vault/read-blob test-vault-two first-object)]
+  [false "{\"answer\":42}"])
  (test-check
   "source documents retain provider identity after archival"
   (get first-document "providerId")

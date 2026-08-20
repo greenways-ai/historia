@@ -2,13 +2,16 @@
   (:require [historia.core.provider :as provider]
             [historia.provider.observation :as observation]
             [historia.source.archive :as archive]
-            [work.base :as work]))
+            [work.base :as work]
+            [work.eval :as work-eval]))
 
 (def schema "historia.provider-broker/0-alpha")
 
 (def descriptor
   {"schema" schema
-   "execution" "hara.work/step"
+   "execution" "hara.work/managed"
+   "workAlgebra" ["step" "pure" "chain"]
+   "defaultWorkStore" "memory"
    "archive" archive/schema
    "operations" ["discover" "pull" "observe" "status"]
    "credentialPolicy" "executor-bound"})
@@ -17,10 +20,32 @@
   ([registry]
    (create registry {}))
   ([registry options]
-   {:schema schema
-    :registry registry
-    :host (or (:host options) work/default-host)
-    :executors {}}))
+   (let [runtime
+         (if (has? options :work/runtime)
+           (:work/runtime options)
+           (work/durable-runtime))]
+     {:schema schema
+      :registry registry
+      :work/runtime runtime
+      :executors {}})))
+
+(defn work-runtime
+  [broker]
+  (:work/runtime broker))
+
+(defn managed?
+  [broker]
+  (let [runtime (work-runtime broker)]
+    (and runtime
+         (not (nil? (:work/store runtime))))))
+
+(defn- runtime-mode
+  [broker]
+  (let [runtime (work-runtime broker)]
+    (if runtime
+      (or (:work/mode (:work/policy runtime))
+          (if (managed? broker) :managed :bare))
+      :bare)))
 
 (defn- contains-value?
   [values value]
@@ -55,58 +80,6 @@
        :provider/id (get descriptor "id")
        :operation operation})))
   descriptor)
-
-(defn- executor-work
-  [descriptor executor]
-  (work/step
-   {:id (symbol
-         (str/join
-          ""
-          ["historia.provider/" (get descriptor "id")]))
-    :version 1
-    :retry {:maximum 1}}
-   (fn [request context]
-     (executor request context))))
-
-(defn bind
-  [broker provider-id executor]
-  (if (not (fn? executor))
-    (throw
-     (ex-info
-      "Provider executor binding must be a function"
-      {:error/code :historia.provider/invalid-executor
-       :provider/id provider-id})))
-  (let [descriptor (provider-descriptor! broker provider-id)
-        binding
-        {:provider descriptor
-         :work (executor-work descriptor executor)}]
-    (assoc broker
-           :executors
-           (assoc (:executors broker)
-                  provider-id
-                  binding))))
-
-(defn bound?
-  [broker provider-id]
-  (not (nil? (get (:executors broker) provider-id))))
-
-(defn executor-spec
-  [broker provider-id]
-  (let [binding (get (:executors broker) provider-id)]
-    (if binding
-      (work/work-spec (:work binding))
-      nil)))
-
-(defn- binding!
-  [broker provider-id]
-  (let [binding (get (:executors broker) provider-id)]
-    (if (nil? binding)
-      (throw
-       (ex-info
-        "Provider has no executor binding"
-        {:error/code :historia.provider/not-bound
-         :provider/id provider-id})))
-    binding))
 
 (defn- validate-request!
   [broker request]
@@ -178,18 +151,156 @@
     "warnings" (get value "warnings")})
   value)
 
+(defn- provider-work-id
+  [descriptor stage]
+  (symbol
+   (str/join
+    ""
+    ["historia.provider/"
+     (get descriptor "id")
+     "-"
+     stage])))
+
+(defn- executor-work
+  [descriptor executor]
+  (work/step
+   {:id (provider-work-id descriptor "invoke")
+    :version 1
+    :retry {:maximum 1}}
+   (fn [request context]
+     (executor request context))))
+
+(defn- validation-work
+  [descriptor request]
+  (work/pure
+   {:id (provider-work-id descriptor "validate")
+    :version 1}
+   (fn [value context]
+     (validate-result! request value))))
+
+(defn- execution-work
+  [binding request]
+  (let [descriptor (:provider binding)]
+    (work/chain
+     {:id (provider-work-id descriptor "execute")
+      :version 1}
+     [(:work binding)
+      (validation-work descriptor request)])))
+
+(defn- acquisition-work
+  [binding vault request]
+  (let [descriptor (:provider binding)]
+    (work/chain
+     {:id (provider-work-id descriptor "acquire")
+      :version 1}
+     [(:work binding)
+      (validation-work descriptor request)
+      (work/step
+       {:id (provider-work-id descriptor "archive")
+        :version 1
+        :retry {:maximum 1}}
+       (fn [value context]
+         (archive/acquire vault request value)))])))
+
+(defn bind
+  [broker provider-id executor]
+  (if (not (fn? executor))
+    (throw
+     (ex-info
+      "Provider executor binding must be a function"
+      {:error/code :historia.provider/invalid-executor
+       :provider/id provider-id})))
+  (let [descriptor (provider-descriptor! broker provider-id)
+        binding
+        {:provider descriptor
+         :executor executor
+         :work (executor-work descriptor executor)}]
+    (assoc broker
+           :executors
+           (assoc (:executors broker)
+                  provider-id
+                  binding))))
+
+(defn bound?
+  [broker provider-id]
+  (not (nil? (get (:executors broker) provider-id))))
+
+(defn executor-spec
+  [broker provider-id]
+  (let [binding (get (:executors broker) provider-id)]
+    (if binding
+      (work/work-spec (:work binding))
+      nil)))
+
+(defn acquisition-spec
+  [broker provider-id]
+  (let [binding (get (:executors broker) provider-id)]
+    (if binding
+      (work/work-spec
+       (acquisition-work binding nil nil))
+      nil)))
+
+(defn- binding!
+  [broker provider-id]
+  (let [binding (get (:executors broker) provider-id)]
+    (if (nil? binding)
+      (throw
+       (ex-info
+        "Provider has no executor binding"
+        {:error/code :historia.provider/not-bound
+         :provider/id provider-id})))
+    binding))
+
+(defn- run-id
+  [kind request]
+  (str/join
+   ""
+   ["historia.provider/"
+    kind
+    "/"
+    (get request "providerId")
+    "/"
+    (get request "requestId")]))
+
+(defn- acquisition-run-id
+  [vault request]
+  (str/join
+   ""
+   ["historia.provider/acquire/"
+    (get request "providerId")
+    "/"
+    vault
+    "/"
+    (get request "requestId")]))
+
+(defn- bare-options
+  [runtime id]
+  {:run/id id
+   :work/registry (if runtime (:work/registry runtime) nil)
+   :work/policy (if runtime (:work/policy runtime) {})
+   :work/hooks (if runtime (:work/hooks runtime) {})})
+
+(defn- run-work
+  [broker id work-value input]
+  (let [runtime (work-runtime broker)]
+    (if (managed? broker)
+      (work/run runtime work-value input {:id id})
+      (work-eval/run
+       (if runtime (:work/executor runtime) nil)
+       work-value
+       input
+       (bare-options runtime id)))))
+
 (defn execute
   [broker request]
   (let [request (validate-request! broker request)
         provider-id (get request "providerId")
-        binding (binding! broker provider-id)
-        value
-        (work/run
-         (:host broker)
-         (:work binding)
-         request
-         {:id (get request "requestId")})]
-    (validate-result! request value)))
+        binding (binding! broker provider-id)]
+    (run-work
+     broker
+     (run-id "execute" request)
+     (execution-work binding request)
+     request)))
 
 (defn acquire
   [broker vault request]
@@ -197,13 +308,17 @@
         existing (archive/lookup-request vault request)]
     (if existing
       existing
-      (archive/acquire
-       vault
-       request
-       (execute broker request)))))
+      (let [provider-id (get request "providerId")
+            binding (binding! broker provider-id)]
+        (run-work
+         broker
+         (acquisition-run-id vault request)
+         (acquisition-work binding vault request)
+         request)))))
 
 (defn status
   [broker]
   {"schema" schema
    "registered" (provider/counts (:registry broker))
-   "boundProviders" (vec (sort (keys (:executors broker))))})
+   "boundProviders" (vec (sort (keys (:executors broker))))
+   "workMode" (runtime-mode broker)})
