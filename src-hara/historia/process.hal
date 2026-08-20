@@ -19,11 +19,9 @@
     (if (= 0 (:exit result))
       result
       (throw
-       (ex-info
-        (str/join
+       (ex :host result :ex/message (str/join
          ""
          ["command failed ("
           (:exit result)
           "): "
-          (str/join " " argv)])
-        result)))))
+          (str/join " " argv)]))))))

@@ -38,7 +38,7 @@
       (if (= bare "true")
         {"vault" vault
          "objectFormat" (if (str/blank? object-format) "sha1" object-format)}
-        (throw (ex-info "Historia vault is not a bare Git repository" {:vault vault}))))))
+        (throw (ex :historia.ex/invalid-vault {:vault vault} :ex/message "Historia vault is not a bare Git repository" :ex/class :historia.class/vault))))))
 
 (defn verify
   [provided]
