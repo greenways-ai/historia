@@ -1,0 +1,43 @@
+(ns historia.flow
+  (:require [historia.flow.repair :as repair]
+            [historia.flow.runtime :as runtime]))
+
+(def repair-work repair/analysis-gaps)
+
+(defn start-repair
+  "Starts the repair graph and returns its session and durable reference.
+
+   Runtime options select :durable (the default) or :ephemeral. Repair request
+   services are passed as the graph input so the graph remains portable."
+  ([request]
+   (start-repair {} request))
+  ([options request]
+   (let [session (runtime/open options)
+         reference
+         (runtime/start session
+                        repair-work
+                        request
+                        (merge {:id (or (:run-id options)
+                                        "historia-repair")}
+                               (or (:work/options options) {})))]
+     {:session session
+      :reference reference
+      :status (runtime/status session reference)})))
+
+(defn resume-repair
+  ([execution]
+   (resume-repair execution {}))
+  ([execution options]
+   (let [session (:session execution)
+         reference (runtime/resume session (:reference execution) options)]
+     (assoc execution
+            :reference reference
+            :status (runtime/status session reference)))))
+
+(defn repair-result
+  [execution]
+  (runtime/result (:session execution) (:reference execution)))
+
+(defn close
+  [execution]
+  (runtime/close (:session execution)))

@@ -1,0 +1,144 @@
+(ns historia.flow.repair
+  (:require [work.base :as work :refer [def.work]]
+            [work.flow.task]))
+
+(def schema "historia.flow.repair/0-alpha")
+
+(defn language-for-path
+  [path]
+  (cond
+    (or (str/ends-with? path ".clj")
+        (str/ends-with? path ".cljc")
+        (str/ends-with? path ".bb")) :clojure
+    (str/ends-with? path ".cljs") :clojurescript
+    :else nil))
+
+(defn required-service
+  [request key]
+  (let [service (get request key)]
+    (if (fn? service)
+      service
+      (throw
+       (ex-info "Historia repair service is required"
+                {:historia.flow/service key})))))
+
+(defn optional-service
+  [request key]
+  (let [service (get request key)]
+    (if (fn? service) service nil)))
+
+(defn gap-id
+  [gap]
+  (or (:item/id gap)
+      [(:repository-id gap)
+       (:commit-oid gap)
+       (:path gap)
+       (:blob-oid gap)]))
+
+(defn stable-gap
+  [gap]
+  {:item/id (gap-id gap)
+   :item/value (assoc gap :item/id (gap-id gap))})
+
+(defn list-gaps
+  [request context]
+  (vec
+   (map stable-gap
+        ((required-service request :repair/list-gaps) request context))))
+
+(defn field-value
+  [value keyword-key string-key]
+  (if (has? value keyword-key)
+    (get value keyword-key)
+    (get value string-key)))
+
+(defn valid-analysis?
+  [response]
+  (let [analysis (or (field-value response :result "result") response)
+        file (field-value analysis :file "file")
+        symbols (field-value analysis :symbols "symbols")
+        references (field-value analysis :references "references")]
+    (and file (vector? symbols) (vector? references))))
+
+(defn response-analysis
+  [response]
+  (or (field-value response :result "result") response))
+
+(defn repair-request
+  [context]
+  (get-in context [:command/subject :task/input]))
+
+(defn persist-error
+  [request gap language response context]
+  ((required-service request :repair/persist-error)
+   {:gap gap
+    :language language
+    :response response
+    :fingerprint "repair-error"}
+   context))
+
+(defn persist-analysis
+  [request gap language response fingerprint context]
+  ((required-service request :repair/persist-analysis)
+   {:gap gap
+    :language language
+    :analysis (response-analysis response)
+    :fingerprint fingerprint}
+   context))
+
+(defn repair-gap
+  [gap context]
+  (let [request (repair-request context)
+        language (language-for-path (:path gap))]
+    (if (nil? language)
+      {:status :warn
+       :data {:outcome :unsupported :gap gap}}
+      (let [source ((required-service request :repair/read-source) gap context)
+            analyze (required-service request :repair/analyze)
+            response (analyze {:gap gap
+                               :language language
+                               :source source}
+                              context)
+            fallback (optional-service request :repair/analyze-fallback)
+            fallback-response
+            (if (and (not (valid-analysis? response)) fallback)
+              (fallback {:gap gap
+                         :language language
+                         :source source}
+                        context)
+              nil)
+            selected
+            (if (and fallback-response (valid-analysis? fallback-response))
+              fallback-response
+              response)
+            fingerprint
+            (if (and fallback-response (valid-analysis? fallback-response))
+              "repair-fallback"
+              "repair")]
+        (if (valid-analysis? selected)
+          (do
+            (persist-analysis request gap language selected fingerprint context)
+            {:status :return
+             :data {:outcome :repaired
+                    :gap gap
+                    :fingerprint fingerprint}})
+          (do
+            (persist-error request gap language selected context)
+            {:status :error
+             :data {:outcome :analysis-error
+                    :gap gap}}))))))
+
+(def.work analysis-gaps
+  [:task]
+  {:version 1
+   :execution {:order :input
+               :parallel false
+               :on-error :fail}
+   :item {:list list-gaps
+          :list-mode :input-context
+          :run repair-gap}
+   :result {:order :item/index}
+   :return {:select :all
+            :package :map}
+   :metadata {:schema schema
+              :description "Repair missing Historia analyses in stable manifest order."}})

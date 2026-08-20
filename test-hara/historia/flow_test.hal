@@ -1,0 +1,97 @@
+(ns historia.flow-test
+  (:require [historia.flow.repair :as repair]
+            [historia.flow.runtime :as flow-runtime]
+            [work.base :as work]
+            [work.provider.memory :as memory]))
+
+(def gaps
+  [{:repository-id 1 :commit-oid "a" :path "src/a.clj" :blob-oid "1"}
+   {:repository-id 1 :commit-oid "b" :path "src/b.cljs" :blob-oid "2"}
+   {:repository-id 1 :commit-oid "c" :path "README.md" :blob-oid "3"}])
+
+(defn successful-request
+  [persisted]
+  {:repair/list-gaps (fn [request context] gaps)
+   :repair/read-source (fn [gap context] (str "source:" (:blob-oid gap)))
+   :repair/analyze
+   (fn [input context]
+     {:result {:file {:path (get-in input [:gap :path])}
+               :symbols []
+               :references []}})
+   :repair/persist-analysis
+   (fn [record context]
+     (swap! persisted conj [(:fingerprint record)
+                            (get-in record [:gap :blob-oid])]))
+   :repair/persist-error (fn [record context] true)})
+
+(def local-persisted (atom []))
+(def durable-persisted (atom []))
+(def local-session (flow-runtime/open {:work-runtime :ephemeral}))
+(def durable-session
+  (flow-runtime/open {:work-runtime :durable
+                      :store (memory/memory-store)}))
+(def local-reference
+  (flow-runtime/start local-session repair/analysis-gaps
+                      (successful-request local-persisted)
+                      {:id "historia-flow-local"}))
+(def durable-reference
+  (flow-runtime/start durable-session repair/analysis-gaps
+                      (successful-request durable-persisted)
+                      {:id "historia-flow-durable"}))
+(def local-result (flow-runtime/result local-session local-reference))
+(def durable-result (flow-runtime/result durable-session durable-reference))
+
+(def changing-gaps (atom (vec (take 2 gaps))))
+(def fail-once (atom true))
+(def resume-persisted (atom []))
+(def resume-request
+  {:repair/list-gaps (fn [request context] (deref changing-gaps))
+   :repair/read-source
+   (fn [gap context]
+     (if (and (= "2" (:blob-oid gap)) (deref fail-once))
+       (throw (ex-info "temporary reader failure" {:gap gap}))
+       (str "source:" (:blob-oid gap))))
+   :repair/analyze
+   (fn [input context]
+     {:result {:file {:path (get-in input [:gap :path])}
+               :symbols []
+               :references []}})
+   :repair/persist-analysis
+   (fn [record context]
+     (swap! resume-persisted conj (get-in record [:gap :blob-oid])))
+   :repair/persist-error (fn [record context] true)})
+(def resume-session
+  (flow-runtime/open {:work-runtime :durable
+                      :store (memory/memory-store)}))
+(def failed-reference
+  (flow-runtime/start resume-session repair/analysis-gaps resume-request
+                      {:id "historia-flow-resume"}))
+(reset! changing-gaps gaps)
+(reset! fail-once false)
+(def resumed-reference
+  (flow-runtime/resume resume-session failed-reference))
+(def resumed-result
+  (flow-runtime/result resume-session resumed-reference))
+
+(def results
+  [(test-check
+    "the same repair graph has ephemeral and durable result semantics"
+    [(select-keys (:summary local-result) [:items :results :warnings :errors])
+     (select-keys (:summary durable-result) [:items :results :warnings :errors])
+     (deref local-persisted)
+     (deref durable-persisted)]
+    [{:items 3 :results 2 :warnings 1 :errors 0}
+     {:items 3 :results 2 :warnings 1 :errors 0}
+     [["repair" "1"] ["repair" "2"]]
+     [["repair" "1"] ["repair" "2"]]])
+
+   (test-check
+    "durable resume reuses the original manifest and completed item checkpoints"
+    [(flow-runtime/status resume-session resumed-reference)
+     (select-keys (:summary resumed-result) [:items :results :warnings :errors])
+     (deref resume-persisted)]
+    [:completed
+     {:items 2 :results 2 :warnings 0 :errors 0}
+     ["1" "2"]])])
+
+results

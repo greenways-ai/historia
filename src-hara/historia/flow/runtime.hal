@@ -1,0 +1,76 @@
+(ns historia.flow.runtime
+  (:require [work.base :as work]))
+
+(def default-mode :durable)
+(def default-work-path ".greenways-historian/work.sqlite")
+
+(defn runtime-mode
+  [options]
+  (or (:work-runtime options) (:mode options) default-mode))
+
+(defn open-store
+  [options]
+  (if (:store options)
+    (:store options)
+    (let [open-function (:store/open options)]
+      (if (fn? open-function)
+        (deref
+         (open-function
+          {:storage :file
+           :filename (or (:work-path options) default-work-path)}))
+        (throw
+         (ex-info "Durable Historia workflows require a work store provider"
+                  {:historia.flow/mode :durable
+                   :historia.flow/work-path
+                   (or (:work-path options) default-work-path)}))))))
+
+(defn open
+  ([] (open {}))
+  ([options]
+   (let [mode (runtime-mode options)]
+     (case mode
+       :ephemeral
+       {:mode mode
+        :runtime (work/local-runtime (:runtime/options options))
+        :store nil
+        :close nil}
+
+       :durable
+       (let [store (open-store options)]
+         {:mode mode
+          :runtime (work/durable-runtime
+                    (assoc (or (:runtime/options options) {})
+                           :store store))
+          :store store
+          :close (:store/close options)})
+
+       (throw
+        (ex-info "Historia work runtime is not supported"
+                 {:historia.flow/mode mode}))))))
+
+(defn close
+  [session]
+  (let [close-function (:close session)]
+    (if (and close-function (:store session))
+      (deref (close-function (:store session)))
+      true)))
+
+(defn start
+  ([session work-value input]
+   (start session work-value input {}))
+  ([session work-value input options]
+   (work/start (:runtime session) work-value input options)))
+
+(defn resume
+  ([session reference]
+   (resume session reference {}))
+  ([session reference options]
+   (work/resume (:runtime session) reference options)))
+
+(defn status
+  [session reference]
+  (work/status (:runtime session) reference))
+
+(defn result
+  [session reference]
+  (work/result (:runtime session) reference))
