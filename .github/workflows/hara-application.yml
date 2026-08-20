@@ -45,6 +45,15 @@ jobs:
             | tee target/hara-application/lite-application.edn
           grep -q 'historia.core/0-alpha' target/hara-application/lite-application.edn
 
+      - name: Run focused provider Work tests through native hara-test
+        run: |
+          CARGO_TARGET_DIR=target/hara-build cargo run --quiet \
+            --manifest-path target/hara-runtime/core/rust/Cargo.toml \
+            --bin hara-test -- \
+            --root "$GITHUB_WORKSPACE" \
+            "$GITHUB_WORKSPACE/test-hara/historia/provider_broker_test.hal" \
+            "$GITHUB_WORKSPACE/test-hara/historia/source_archive_test.hal"
+
       - name: Check and test the capability-free core package
         run: |
           target/bin/hara --project "$GITHUB_WORKSPACE/packages/core" check
