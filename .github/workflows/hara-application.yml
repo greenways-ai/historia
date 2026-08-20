@@ -47,10 +47,27 @@ jobs:
 
       - name: Run focused provider Work tests through native hara-test
         run: |
+          work_project="$GITHUB_WORKSPACE/target/provider-work-project"
+          rm -rf "$work_project"
+          mkdir -p "$work_project/src"
+          cp -R target/hara-runtime/core/lib/src/. "$work_project/src/"
+          cp -R packages/core/src/. "$work_project/src/"
+          cp -R src-hara/. "$work_project/src/"
+          cat > "$work_project/project.edn" <<'EOF'
+          {:hara/type :project
+           :hara/version "1.0.0"
+           :project/id greenways/historia-provider-work-test
+           :project/version "0.1.0"
+           :project/source-paths ["src"]
+           :project/test-paths []
+           :project/extension-paths []
+           :project/capabilities #{:file :process}
+           :project/dependencies {}}
+          EOF
           CARGO_TARGET_DIR=target/hara-build cargo run --quiet \
             --manifest-path target/hara-runtime/core/rust/Cargo.toml \
             --bin hara-test -- \
-            --root "$GITHUB_WORKSPACE" \
+            --root "$work_project" \
             "$GITHUB_WORKSPACE/test-hara/historia/provider_broker_test.hal" \
             "$GITHUB_WORKSPACE/test-hara/historia/source_archive_test.hal"
 
